@@ -1,13 +1,33 @@
-
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <title>My Video Studio</title>
+
+  <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
+
   <h1>My Video Studio</h1>
-  <button>Create New Video</button>
-  <button>My Projects</button>
+
+  <input
+    type="file"
+    id="videoInput"
+    accept="video/*"
+  >
+
+  <video
+    id="videoPreview"
+    controls
+    style="display:none; width:90%; max-width:500px; margin:20px auto;"
+  ></video>
+
+  <button id="addVideo">Select Video</button>
+
+  <script src="script.js"></script>
+
 </body>
 </html>
