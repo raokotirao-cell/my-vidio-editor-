@@ -49,18 +49,24 @@
     >
 
     <button id="previewTrim">Preview Trim</button>
-<button id="exportTrim">Export Trimmed Video</button>
 
-<p id="exportStatus"></p>
-<a id="downloadVideo" style="display:none;">
-  Download Video
-</a>
+    <button id="exportTrim">
+      Export Trimmed Video
+    </button>
+
+    <p id="exportStatus"></p>
+
+    <a
+      id="downloadVideo"
+      style="display:none;"
+      download="trimmed-video.mp4"
+    >
+      Download Video
+    </a>
+
   </div>
-  <script
- src="https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
-<script src="script.js"></script>
 
-  <script type="module" src="script.js"></script>
+  <script src="script.js"></script>
 
 </body>
 </html>
