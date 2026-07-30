@@ -1,6 +1,6 @@
 const videoInput = document.getElementById("videoInput");
-const videoPreview = document.getElementById("videoPreview");
 const addVideo = document.getElementById("addVideo");
+const videoPreview = document.getElementById("videoPreview");
 
 const trimControls = document.getElementById("trimControls");
 const startTime = document.getElementById("startTime");
@@ -13,17 +13,25 @@ const exportStatus = document.getElementById("exportStatus");
 const downloadVideo = document.getElementById("downloadVideo");
 
 let selectedVideo = null;
+let originalVideoURL = null;
 let trimmedVideoURL = null;
-let ffmpeg = null;
-let ffmpegLoaded = false;
 
-// ------------------------------------
-// Select Video
-// ------------------------------------
+let ffmpeg = null;
+let ffmpegReady = false;
+
+
+// ============================================
+// SELECT VIDEO
+// ============================================
 
 addVideo.addEventListener("click", () => {
   videoInput.click();
 });
+
+
+// ============================================
+// VIDEO SELECTED
+// ============================================
 
 videoInput.addEventListener("change", () => {
   const file = videoInput.files[0];
@@ -34,92 +42,46 @@ videoInput.addEventListener("change", () => {
 
   selectedVideo = file;
 
-  const videoURL = URL.createObjectURL(file);
+  if (originalVideoURL) {
+    URL.revokeObjectURL(originalVideoURL);
+  }
 
-  videoPreview.src = videoURL;
+  originalVideoURL = URL.createObjectURL(file);
+
+  videoPreview.src = originalVideoURL;
   videoPreview.style.display = "block";
+  videoPreview.controls = true;
 
   trimControls.style.display = "block";
 
   startTime.value = "0";
 
-  videoPreview.addEventListener(
-    "loadedmetadata",
-    () => {
-      endTime.value = videoPreview.duration.toFixed(1);
-    },
-    { once: true }
-  );
+  videoPreview.onloadedmetadata = () => {
+    const duration = videoPreview.duration;
 
-  exportStatus.textContent = "";
-  downloadVideo.style.display = "none";
-});
+    endTime.value = duration.toFixed(1);
 
-// ------------------------------------
-// Load FFmpeg
-// ------------------------------------
-
- async function loadFFmpeg() {
-  if (ffmpegLoaded) {
-    return;
-  }
-
-  exportStatus.textContent = "Loading FFmpeg...";
-
-  try {
-    const { FFmpeg } = await import("./ffmpeg/index.js");
-
-    ffmpeg = new FFmpeg();
-
-    ffmpeg.on("log", ({ message }) => {
-      console.log("FFmpeg:", message);
-    });
-
-    ffmpeg.on("progress", ({ progress }) => {
-      const percent = Math.round(progress * 100);
-      exportStatus.textContent =
-        `Exporting video... ${percent}%`;
-    });
-
-    const baseURL =
-      "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
-
-    await ffmpeg.load({
-      coreURL: await createBlobURL(
-        `${baseURL}/ffmpeg-core.js`,
-        "text/javascript"
-      ),
-      wasmURL: await createBlobURL(
-        `${baseURL}/ffmpeg-core.wasm`,
-        "application/wasm"
-      )
-    });
-
-    ffmpegLoaded = true;
-
-    exportStatus.textContent = "✅ Video engine ready.";
-
-  } catch (error) {
-    console.error("FFmpeg loading error:", error);
+    startTime.max = duration;
+    endTime.max = duration;
 
     exportStatus.textContent =
-      "❌ LOAD ERROR: " +
-      (error.message || error);
+      `Video loaded: ${duration.toFixed(1)} seconds`;
 
-    throw error;
-  }
-}
+    downloadVideo.style.display = "none";
+  };
+});
 
-// ------------------------------------
-// Create Blob URL
-// ------------------------------------
+
+// ============================================
+// CREATE BLOB URL
+// ============================================
 
 async function createBlobURL(url, mimeType) {
   const response = await fetch(url);
 
   if (!response.ok) {
     throw new Error(
-      `Failed to load FFmpeg file: ${response.status}`
+      `Failed to download FFmpeg file: ${response.status}`
     );
   }
 
@@ -132,31 +94,113 @@ async function createBlobURL(url, mimeType) {
   );
 }
 
-// ------------------------------------
-// Validate Trim Times
-// ------------------------------------
+
+// ============================================
+// LOAD FFMPEG
+// ============================================
+
+async function loadFFmpeg() {
+  if (ffmpegReady) {
+    return;
+  }
+
+  exportStatus.textContent =
+    "Loading video engine... Please wait.";
+
+  try {
+    const module = await import("./ffmpeg/index.js");
+
+    ffmpeg = new module.FFmpeg();
+
+    ffmpeg.on("log", ({ message }) => {
+      console.log("FFmpeg:", message);
+    });
+
+    ffmpeg.on("progress", ({ progress }) => {
+      const percent = Math.round(progress * 100);
+
+      exportStatus.textContent =
+        `Exporting video... ${percent}%`;
+    });
+
+    const baseURL =
+      "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
+
+    const coreURL = await createBlobURL(
+      `${baseURL}/ffmpeg-core.js`,
+      "text/javascript"
+    );
+
+    const wasmURL = await createBlobURL(
+      `${baseURL}/ffmpeg-core.wasm`,
+      "application/wasm"
+    );
+
+    await ffmpeg.load({
+      classWorkerURL: "./ffmpeg/worker.js",
+      coreURL: coreURL,
+      wasmURL: wasmURL
+    });
+
+    ffmpegReady = true;
+
+    exportStatus.textContent =
+      "✅ Video engine ready.";
+
+  } catch (error) {
+    console.error(
+      "FFmpeg loading error:",
+      error
+    );
+
+    exportStatus.textContent =
+      "❌ FFmpeg LOAD ERROR: " +
+      (error.message || error);
+
+    throw error;
+  }
+}
+
+
+// ============================================
+// GET TRIM TIMES
+// ============================================
 
 function getTrimTimes() {
+  if (!selectedVideo) {
+    throw new Error(
+      "Please select a video first."
+    );
+  }
+
   const start = Number(startTime.value);
   const end = Number(endTime.value);
 
-  if (!selectedVideo) {
-    throw new Error("Please select a video first.");
-  }
-
-  if (!Number.isFinite(start) || !Number.isFinite(end)) {
-    throw new Error("Enter valid start and end times.");
+  if (
+    !Number.isFinite(start) ||
+    !Number.isFinite(end)
+  ) {
+    throw new Error(
+      "Please enter valid start and end times."
+    );
   }
 
   if (start < 0) {
-    throw new Error("Start time cannot be negative.");
+    throw new Error(
+      "Start time cannot be negative."
+    );
   }
 
   if (end <= start) {
-    throw new Error("End time must be greater than start time.");
+    throw new Error(
+      "End time must be greater than start time."
+    );
   }
 
-  if (videoPreview.duration && end > videoPreview.duration) {
+  if (
+    videoPreview.duration &&
+    end > videoPreview.duration
+  ) {
     throw new Error(
       `End time cannot be greater than ${videoPreview.duration.toFixed(
         1
@@ -171,117 +215,196 @@ function getTrimTimes() {
   };
 }
 
-// ------------------------------------
-// Export Trimmed Video
-// ------------------------------------
+
+// ============================================
+// CREATE TRIMMED VIDEO
+// ============================================
 
 async function makeTrimmedVideo() {
   await loadFFmpeg();
 
   const times = getTrimTimes();
 
-  exportStatus.textContent = "Preparing video...";
+  exportStatus.textContent =
+    "Preparing video...";
 
-  const inputData = new Uint8Array(
-    await selectedVideo.arrayBuffer()
+  const inputData =
+    new Uint8Array(
+      await selectedVideo.arrayBuffer()
+    );
+
+  await ffmpeg.writeFile(
+    "input.mp4",
+    inputData
   );
 
-  await ffmpeg.writeFile("input.mp4", inputData);
-
-  exportStatus.textContent = "Trimming video...";
+  exportStatus.textContent =
+    "Trimming video...";
 
   await ffmpeg.exec([
     "-ss",
     String(times.start),
+
     "-i",
     "input.mp4",
+
     "-t",
     String(times.duration),
+
     "-c:v",
     "libx264",
+
+    "-preset",
+    "veryfast",
+
+    "-crf",
+    "23",
+
     "-c:a",
     "aac",
+
     "-movflags",
     "+faststart",
+
     "output.mp4"
   ]);
 
-  exportStatus.textContent = "Reading trimmed video...";
+  exportStatus.textContent =
+    "Preparing output...";
 
-  const data = await ffmpeg.readFile("output.mp4");
+  const data =
+    await ffmpeg.readFile(
+      "output.mp4"
+    );
 
-  const blob = new Blob(
-    [data.buffer],
-    {
-      type: "video/mp4"
-    }
-  );
+  const blob =
+    new Blob(
+      [data.buffer],
+      {
+        type: "video/mp4"
+      }
+    );
 
   if (trimmedVideoURL) {
-    URL.revokeObjectURL(trimmedVideoURL);
+    URL.revokeObjectURL(
+      trimmedVideoURL
+    );
   }
 
-  trimmedVideoURL = URL.createObjectURL(blob);
+  trimmedVideoURL =
+    URL.createObjectURL(blob);
 
   return trimmedVideoURL;
 }
 
-// ------------------------------------
-// Preview Trim
-// ------------------------------------
 
-previewTrim.addEventListener("click", async () => {
-  try {
-    previewTrim.disabled = true;
+// ============================================
+// PREVIEW TRIM
+// ============================================
 
-    const url = await makeTrimmedVideo();
+previewTrim.addEventListener(
+  "click",
+  async () => {
+    try {
+      if (!selectedVideo) {
+        alert(
+          "Please select a video first."
+        );
+        return;
+      }
 
-    videoPreview.src = url;
-    videoPreview.style.display = "block";
+      const times = getTrimTimes();
 
-    videoPreview.controls = true;
+      previewTrim.disabled = true;
+      exportTrim.disabled = true;
 
-    exportStatus.textContent =
-      "Trim preview ready.";
+      exportStatus.textContent =
+        "Creating trim preview...";
 
-    videoPreview.currentTime = 0;
+      const url =
+        await makeTrimmedVideo();
 
-    await videoPreview.play().catch(() => {});
-  } catch (error) {
-    console.error(error);
+      videoPreview.src = url;
+      videoPreview.load();
 
-    exportStatus.textContent =
-      "Error: " + error.message;
-  } finally {
-    previewTrim.disabled = false;
+      videoPreview.style.display =
+        "block";
+
+      videoPreview.controls = true;
+
+      exportStatus.textContent =
+        `✅ Preview ready: ${times.start}s → ${times.end}s`;
+
+      videoPreview.currentTime = 0;
+
+    } catch (error) {
+      console.error(
+        "Preview error:",
+        error
+      );
+
+      exportStatus.textContent =
+        "❌ ERROR: " +
+        (error.message || error);
+
+    } finally {
+      previewTrim.disabled = false;
+      exportTrim.disabled = false;
+    }
   }
-});
+);
 
-// ------------------------------------
-// Export Trim
-// ------------------------------------
 
-exportTrim.addEventListener("click", async () => {
-  try {
-    exportTrim.disabled = true;
+// ============================================
+// EXPORT TRIMMED VIDEO
+// ============================================
 
-    const url = await makeTrimmedVideo();
+exportTrim.addEventListener(
+  "click",
+  async () => {
+    try {
+      if (!selectedVideo) {
+        alert(
+          "Please select a video first."
+        );
+        return;
+      }
 
-    downloadVideo.href = url;
-    downloadVideo.download = "trimmed-video.mp4";
+      getTrimTimes();
 
-    downloadVideo.style.display = "inline-block";
+      exportTrim.disabled = true;
+      previewTrim.disabled = true;
 
-    exportStatus.textContent =
-      "Trim completed. Download your video.";
+      downloadVideo.style.display =
+        "none";
 
-  } catch (error) {
-    console.error(error);
+      const url =
+        await makeTrimmedVideo();
 
-    exportStatus.textContent =
-      "Error: " + error.message;
-  } finally {
-    exportTrim.disabled = false;
+      downloadVideo.href = url;
+
+      downloadVideo.download =
+        "trimmed-video.mp4";
+
+      downloadVideo.style.display =
+        "inline-block";
+
+      exportStatus.textContent =
+        "✅ Trim completed. Download your video.";
+
+    } catch (error) {
+      console.error(
+        "Export error:",
+        error
+      );
+
+      exportStatus.textContent =
+        "❌ ERROR: " +
+        (error.message || error);
+
+    } finally {
+      exportTrim.disabled = false;
+      previewTrim.disabled = false;
+    }
   }
-});
- 
+);
