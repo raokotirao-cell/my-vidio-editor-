@@ -59,42 +59,55 @@ videoInput.addEventListener("change", () => {
 // Load FFmpeg
 // ------------------------------------
 
-async function loadFFmpeg() {
+ async function loadFFmpeg() {
   if (ffmpegLoaded) {
     return;
   }
 
   exportStatus.textContent = "Loading FFmpeg...";
 
-  const module = await import("./ffmpeg/index.js");
+  try {
+    const { FFmpeg } = await import("./ffmpeg/index.js");
 
-  const FFmpeg = module.FFmpeg;
+    ffmpeg = new FFmpeg();
 
-  ffmpeg = new FFmpeg();
+    ffmpeg.on("log", ({ message }) => {
+      console.log("FFmpeg:", message);
+    });
 
-  ffmpeg.on("log", ({ message }) => {
-    console.log("FFmpeg:", message);
-  });
+    ffmpeg.on("progress", ({ progress }) => {
+      const percent = Math.round(progress * 100);
+      exportStatus.textContent =
+        `Exporting video... ${percent}%`;
+    });
 
-  // FFmpeg core files from official CDN
-  const baseURL =
-    "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
+    const baseURL =
+      "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
 
-  await ffmpeg.load({
-    classWorkerURL: "./ffmpeg/worker.js",
-    coreURL: await createBlobURL(
-      `${baseURL}/ffmpeg-core.js`,
-      "text/javascript"
-    ),
-    wasmURL: await createBlobURL(
-      `${baseURL}/ffmpeg-core.wasm`,
-      "application/wasm"
-    )
-  });
+    await ffmpeg.load({
+      coreURL: await createBlobURL(
+        `${baseURL}/ffmpeg-core.js`,
+        "text/javascript"
+      ),
+      wasmURL: await createBlobURL(
+        `${baseURL}/ffmpeg-core.wasm`,
+        "application/wasm"
+      )
+    });
 
-  ffmpegLoaded = true;
+    ffmpegLoaded = true;
 
-  exportStatus.textContent = "FFmpeg loaded.";
+    exportStatus.textContent = "✅ Video engine ready.";
+
+  } catch (error) {
+    console.error("FFmpeg loading error:", error);
+
+    exportStatus.textContent =
+      "❌ LOAD ERROR: " +
+      (error.message || error);
+
+    throw error;
+  }
 }
 
 // ------------------------------------
