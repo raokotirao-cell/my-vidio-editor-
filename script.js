@@ -726,16 +726,13 @@ if (exportMusic) {
         // --------------------------------
         // Audio Context
         // --------------------------------
+        const {
+  audioContext,
+  videoSource
+} = getVideoAudioSource();
 
-        const AudioContext =
-          window.AudioContext ||
-          window.webkitAudioContext;
-
-        const audioContext =
-          new AudioContext();
-
-        const destination =
-          audioContext.createMediaStreamDestination();
+const source = videoSource;
+        ();
 
 
         // --------------------------------
