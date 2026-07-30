@@ -742,7 +742,7 @@ const source = videoSource;
         const videoSource =
           audioContext.createMediaElementSource(
             videoPreview
-          );
+          ); 
 
         const videoGain =
           audioContext.createGain();
