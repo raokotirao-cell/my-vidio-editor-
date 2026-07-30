@@ -13,6 +13,10 @@
 
   <h1>My Video Studio</h1>
 
+  <!-- =========================
+       VIDEO SELECT
+  ========================== -->
+
   <input
     type="file"
     id="videoInput"
@@ -20,17 +24,33 @@
     style="display:none;"
   >
 
-  <button id="addVideo">Select Video</button>
+  <button id="addVideo" type="button">
+    Select Video
+  </button>
 
   <video
     id="videoPreview"
     controls
-    style="display:none; width:90%; max-width:500px; margin:20px auto;"
+    playsinline
+    style="
+      display:none;
+      width:90%;
+      max-width:500px;
+      margin:20px auto;
+    "
   ></video>
+
+
+  <!-- =========================
+       TRIM CONTROLS
+  ========================== -->
 
   <div id="trimControls" style="display:none;">
 
-    <label>Start Time (seconds)</label>
+    <label for="startTime">
+      Start Time (seconds)
+    </label>
+
     <input
       type="number"
       id="startTime"
@@ -39,7 +59,10 @@
       step="0.1"
     >
 
-    <label>End Time (seconds)</label>
+    <label for="endTime">
+      End Time (seconds)
+    </label>
+
     <input
       type="number"
       id="endTime"
@@ -48,14 +71,100 @@
       step="0.1"
     >
 
-    <button id="previewTrim">Preview Trim</button>
-<button id="exportTrim">Export Trimmed Video</button>
+    <button
+      id="previewTrim"
+      type="button"
+    >
+      Preview Trim
+    </button>
 
-<p id="exportStatus"></p>
-<a id="downloadVideo" style="display:none;">
-  Download Video
-</a>
+    <button
+      id="exportTrim"
+      type="button"
+    >
+      Export Trimmed Video
+    </button>
+
+    <p id="exportStatus"></p>
+
+    <a
+      id="downloadVideo"
+      href="#"
+      style="display:none;"
+      download="trimmed-video.mp4"
+    >
+      Download Video
+    </a>
+
   </div>
+
+
+  <!-- =========================
+       MUSIC CONTROLS
+  ========================== -->
+
+  <div
+    id="musicControls"
+    style="display:none;"
+  >
+
+    <h2>Add Music</h2>
+
+    <input
+      type="file"
+      id="audioInput"
+      accept="audio/*"
+      style="display:none;"
+    >
+
+    <button
+      id="addMusic"
+      type="button"
+    >
+      Select Music
+    </button>
+
+    <p id="musicStatus"></p>
+
+    <label for="musicVolume">
+      Music Volume
+    </label>
+
+    <input
+      type="range"
+      id="musicVolume"
+      min="0"
+      max="1"
+      step="0.05"
+      value="0.5"
+    >
+
+    <span id="musicVolumeValue">
+      50%
+    </span>
+
+    <button
+      id="exportMusic"
+      type="button"
+    >
+      Export Video With Music
+    </button>
+
+    <a
+      id="downloadMusic"
+      href="#"
+      style="display:none;"
+      download="video-with-music.mp4"
+    >
+      Download Video With Music
+    </a>
+
+  </div>
+
+
+  <!-- =========================
+       SCRIPT
+  ========================== -->
 
   <script src="script.js"></script>
 
