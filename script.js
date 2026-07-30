@@ -1,6 +1,6 @@
 const videoInput = document.getElementById("videoInput");
-const addVideo = document.getElementById("addVideo");
 const videoPreview = document.getElementById("videoPreview");
+const addVideo = document.getElementById("addVideo");
 
 const trimControls = document.getElementById("trimControls");
 const startTime = document.getElementById("startTime");
@@ -8,403 +8,360 @@ const endTime = document.getElementById("endTime");
 
 const previewTrim = document.getElementById("previewTrim");
 const exportTrim = document.getElementById("exportTrim");
-
 const exportStatus = document.getElementById("exportStatus");
 const downloadVideo = document.getElementById("downloadVideo");
 
-let selectedVideo = null;
-let originalVideoURL = null;
-let trimmedVideoURL = null;
+let videoURL = null;
+let downloadURL = null;
 
-let ffmpeg = null;
-let ffmpegReady = false;
-
-
-// ============================================
-// SELECT VIDEO
-// ============================================
-
+// Select Video
 addVideo.addEventListener("click", () => {
   videoInput.click();
 });
 
-
-// ============================================
-// VIDEO SELECTED
-// ============================================
-
+// Load video
 videoInput.addEventListener("change", () => {
   const file = videoInput.files[0];
 
-  if (!file) {
-    return;
+  if (!file) return;
+
+  if (videoURL) {
+    URL.revokeObjectURL(videoURL);
   }
 
-  selectedVideo = file;
-
-  if (originalVideoURL) {
-    URL.revokeObjectURL(originalVideoURL);
+  if (downloadURL) {
+    URL.revokeObjectURL(downloadURL);
+    downloadURL = null;
   }
 
-  originalVideoURL = URL.createObjectURL(file);
+  downloadVideo.style.display = "none";
+  downloadVideo.removeAttribute("href");
+  exportStatus.textContent = "";
 
-  videoPreview.src = originalVideoURL;
+  videoURL = URL.createObjectURL(file);
+
+  videoPreview.src = videoURL;
   videoPreview.style.display = "block";
-  videoPreview.controls = true;
-
   trimControls.style.display = "block";
-
-  startTime.value = "0";
-
-  videoPreview.onloadedmetadata = () => {
-    const duration = videoPreview.duration;
-
-    endTime.value = duration.toFixed(1);
-
-    startTime.max = duration;
-    endTime.max = duration;
-
-    exportStatus.textContent =
-      `Video loaded: ${duration.toFixed(1)} seconds`;
-
-    downloadVideo.style.display = "none";
-  };
 });
 
+// Metadata loaded
+videoPreview.addEventListener("loadedmetadata", () => {
+  const duration = videoPreview.duration;
 
-// ============================================
-// CREATE BLOB URL
-// ============================================
+  startTime.value = "0";
+  endTime.value = duration.toFixed(1);
 
-async function createBlobURL(url, mimeType) {
-  const response = await fetch(url);
+  startTime.max = duration;
+  endTime.max = duration;
+});
 
-  if (!response.ok) {
-    throw new Error(
-      `Failed to download FFmpeg file: ${response.status}`
-    );
-  }
-
-  const blob = await response.blob();
-
-  return URL.createObjectURL(
-    new Blob([blob], {
-      type: mimeType
-    })
-  );
-}
-
-
-// ============================================
-// LOAD FFMPEG
-// ============================================
-
-async function loadFFmpeg() {
-  if (ffmpegReady) {
-    return;
-  }
-
-  exportStatus.textContent =
-    "Loading video engine... Please wait.";
-
-  try {
-    const module = await import("./ffmpeg/index.js");
-
-    ffmpeg = new module.FFmpeg();
-
-    ffmpeg.on("log", ({ message }) => {
-      console.log("FFmpeg:", message);
-    });
-
-    ffmpeg.on("progress", ({ progress }) => {
-      const percent = Math.round(progress * 100);
-
-      exportStatus.textContent =
-        `Exporting video... ${percent}%`;
-    });
-
-    const baseURL =
-      "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
-
-    const coreURL = await createBlobURL(
-      `${baseURL}/ffmpeg-core.js`,
-      "text/javascript"
-    );
-
-    const wasmURL = await createBlobURL(
-      `${baseURL}/ffmpeg-core.wasm`,
-      "application/wasm"
-    );
-
-    await ffmpeg.load({
-      classWorkerURL: "./ffmpeg/worker.js",
-      coreURL: coreURL,
-      wasmURL: wasmURL
-    });
-
-    ffmpegReady = true;
-
-    exportStatus.textContent =
-      "✅ Video engine ready.";
-
-  } catch (error) {
-    console.error(
-      "FFmpeg loading error:",
-      error
-    );
-
-    exportStatus.textContent =
-      "❌ FFmpeg LOAD ERROR: " +
-      (error.message || error);
-
-    throw error;
-  }
-}
-
-
-// ============================================
-// GET TRIM TIMES
-// ============================================
-
-function getTrimTimes() {
-  if (!selectedVideo) {
-    throw new Error(
-      "Please select a video first."
-    );
-  }
-
+// Preview trim
+previewTrim.addEventListener("click", async () => {
   const start = Number(startTime.value);
   const end = Number(endTime.value);
 
   if (
-    !Number.isFinite(start) ||
-    !Number.isFinite(end)
+    start < 0 ||
+    end <= start ||
+    end > videoPreview.duration
   ) {
-    throw new Error(
-      "Please enter valid start and end times."
-    );
+    alert("Please enter a valid start and end time.");
+    return;
   }
 
-  if (start < 0) {
-    throw new Error(
-      "Start time cannot be negative."
-    );
-  }
+  videoPreview.pause();
+  videoPreview.currentTime = start;
 
-  if (end <= start) {
-    throw new Error(
-      "End time must be greater than start time."
-    );
+  await videoPreview.play();
+
+  const stopPreview = () => {
+    if (videoPreview.currentTime >= end) {
+      videoPreview.pause();
+      videoPreview.removeEventListener("timeupdate", stopPreview);
+    }
+  };
+
+  videoPreview.addEventListener("timeupdate", stopPreview);
+});
+
+// EXPORT
+exportTrim.addEventListener("click", async () => {
+  const start = Number(startTime.value);
+  const end = Number(endTime.value);
+
+  if (!videoPreview.src) {
+    alert("Please select a video first.");
+    return;
   }
 
   if (
-    videoPreview.duration &&
+    start < 0 ||
+    end <= start ||
     end > videoPreview.duration
   ) {
-    throw new Error(
-      `End time cannot be greater than ${videoPreview.duration.toFixed(
-        1
-      )} seconds.`
-    );
+    alert("Please enter a valid start and end time.");
+    return;
   }
 
-  return {
-    start,
-    end,
-    duration: end - start
-  };
-}
+  try {
+    exportTrim.disabled = true;
+    previewTrim.disabled = true;
 
+    downloadVideo.style.display = "none";
+    exportStatus.textContent = "Preparing export...";
 
-// ============================================
-// CREATE TRIMMED VIDEO
-// ============================================
+    // --------------------------------
+    // Canvas for video
+    // --------------------------------
 
-async function makeTrimmedVideo() {
-  await loadFFmpeg();
+    const canvas = document.createElement("canvas");
 
-  const times = getTrimTimes();
+    canvas.width = videoPreview.videoWidth;
+    canvas.height = videoPreview.videoHeight;
 
-  exportStatus.textContent =
-    "Preparing video...";
+    const ctx = canvas.getContext("2d");
 
-  const inputData =
-    new Uint8Array(
-      await selectedVideo.arrayBuffer()
-    );
+    // --------------------------------
+    // Audio context
+    // --------------------------------
 
-  await ffmpeg.writeFile(
-    "input.mp4",
-    inputData
-  );
+    const AudioContext =
+      window.AudioContext || window.webkitAudioContext;
 
-  exportStatus.textContent =
-    "Trimming video...";
+    const audioContext = new AudioContext();
 
-  await ffmpeg.exec([
-    "-ss",
-    String(times.start),
+    const source =
+      audioContext.createMediaElementSource(videoPreview);
 
-    "-i",
-    "input.mp4",
+    const destination =
+      audioContext.createMediaStreamDestination();
 
-    "-t",
-    String(times.duration),
+    source.connect(destination);
 
-    "-c:v",
-    "libx264",
+    // --------------------------------
+    // Video canvas stream
+    // --------------------------------
 
-    "-preset",
-    "veryfast",
+    const videoStream =
+      canvas.captureStream(30);
 
-    "-crf",
-    "23",
+    // --------------------------------
+    // Combine video + audio
+    // --------------------------------
 
-    "-c:a",
-    "aac",
+    const combinedStream =
+      new MediaStream();
 
-    "-movflags",
-    "+faststart",
+    videoStream.getVideoTracks().forEach(track => {
+      combinedStream.addTrack(track);
+    });
 
-    "output.mp4"
-  ]);
+    destination.stream.getAudioTracks().forEach(track => {
+      combinedStream.addTrack(track);
+    });
 
-  exportStatus.textContent =
-    "Preparing output...";
+    // --------------------------------
+    // Recorder
+    // --------------------------------
 
-  const data =
-    await ffmpeg.readFile(
-      "output.mp4"
-    );
+    let mimeType = "";
 
-  const blob =
-    new Blob(
-      [data.buffer],
+    const formats = [
+      "video/webm;codecs=vp9,opus",
+      "video/webm;codecs=vp8,opus",
+      "video/webm"
+    ];
+
+    for (const format of formats) {
+      if (MediaRecorder.isTypeSupported(format)) {
+        mimeType = format;
+        break;
+      }
+    }
+
+    if (!mimeType) {
+      throw new Error("WebM recording is not supported.");
+    }
+
+    const recorder = new MediaRecorder(
+      combinedStream,
       {
-        type: "video/mp4"
+        mimeType: mimeType
       }
     );
 
-  if (trimmedVideoURL) {
-    URL.revokeObjectURL(
-      trimmedVideoURL
+    const chunks = [];
+
+    recorder.ondataavailable = event => {
+      if (event.data && event.data.size > 0) {
+        chunks.push(event.data);
+      }
+    };
+
+    const finished = new Promise(resolve => {
+      recorder.onstop = resolve;
+    });
+
+    // --------------------------------
+    // Move to start
+    // --------------------------------
+
+    videoPreview.pause();
+
+    await new Promise(resolve => {
+      const ready = () => {
+        videoPreview.removeEventListener(
+          "seeked",
+          ready
+        );
+        resolve();
+      };
+
+      videoPreview.addEventListener(
+        "seeked",
+        ready
+      );
+
+      videoPreview.currentTime = start;
+    });
+
+    // --------------------------------
+    // Start recording
+    // --------------------------------
+
+    recorder.start(200);
+
+    await audioContext.resume();
+
+    await videoPreview.play();
+
+    exportStatus.textContent =
+      "Exporting video + audio...";
+
+    // --------------------------------
+    // Draw video frames
+    // --------------------------------
+
+    let drawing = true;
+
+    const drawFrame = () => {
+      if (!drawing) return;
+
+      ctx.drawImage(
+        videoPreview,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      );
+
+      requestAnimationFrame(drawFrame);
+    };
+
+    drawFrame();
+
+    // --------------------------------
+    // Stop exactly at end
+    // --------------------------------
+
+    const stopExport = () => {
+      if (videoPreview.currentTime >= end) {
+
+        drawing = false;
+
+        videoPreview.pause();
+
+        videoPreview.removeEventListener(
+          "timeupdate",
+          stopExport
+        );
+
+        if (recorder.state !== "inactive") {
+          recorder.stop();
+        }
+      }
+    };
+
+    videoPreview.addEventListener(
+      "timeupdate",
+      stopExport
     );
-  }
 
-  trimmedVideoURL =
-    URL.createObjectURL(blob);
+    // Safety timeout
+    const durationMs =
+      ((end - start) + 2) * 1000;
 
-  return trimmedVideoURL;
-}
+    setTimeout(() => {
+      drawing = false;
 
+      videoPreview.pause();
 
-// ============================================
-// PREVIEW TRIM
-// ============================================
-
-previewTrim.addEventListener(
-  "click",
-  async () => {
-    try {
-      if (!selectedVideo) {
-        alert(
-          "Please select a video first."
-        );
-        return;
-      }
-
-      const times = getTrimTimes();
-
-      previewTrim.disabled = true;
-      exportTrim.disabled = true;
-
-      exportStatus.textContent =
-        "Creating trim preview...";
-
-      const url =
-        await makeTrimmedVideo();
-
-      videoPreview.src = url;
-      videoPreview.load();
-
-      videoPreview.style.display =
-        "block";
-
-      videoPreview.controls = true;
-
-      exportStatus.textContent =
-        `✅ Preview ready: ${times.start}s → ${times.end}s`;
-
-      videoPreview.currentTime = 0;
-
-    } catch (error) {
-      console.error(
-        "Preview error:",
-        error
+      videoPreview.removeEventListener(
+        "timeupdate",
+        stopExport
       );
 
-      exportStatus.textContent =
-        "❌ ERROR: " +
-        (error.message || error);
-
-    } finally {
-      previewTrim.disabled = false;
-      exportTrim.disabled = false;
-    }
-  }
-);
-
-
-// ============================================
-// EXPORT TRIMMED VIDEO
-// ============================================
-
-exportTrim.addEventListener(
-  "click",
-  async () => {
-    try {
-      if (!selectedVideo) {
-        alert(
-          "Please select a video first."
-        );
-        return;
+      if (recorder.state !== "inactive") {
+        recorder.stop();
       }
+    }, durationMs);
 
-      getTrimTimes();
+    // Wait for recording to finish
+    await finished;
 
-      exportTrim.disabled = true;
-      previewTrim.disabled = true;
+    // --------------------------------
+    // Create file
+    // --------------------------------
 
-      downloadVideo.style.display =
-        "none";
+    const blob = new Blob(
+      chunks,
+      {
+        type: "video/webm"
+      }
+    );
 
-      const url =
-        await makeTrimmedVideo();
+    downloadURL =
+      URL.createObjectURL(blob);
 
-      downloadVideo.href = url;
+    downloadVideo.href = downloadURL;
+    downloadVideo.download =
+      "trimmed-video.webm";
 
-      downloadVideo.download =
-        "trimmed-video.mp4";
+    downloadVideo.textContent =
+      "Download Trimmed Video";
 
-      downloadVideo.style.display =
-        "inline-block";
+    downloadVideo.style.display =
+      "inline-block";
 
-      exportStatus.textContent =
-        "✅ Trim completed. Download your video.";
+    exportStatus.textContent =
+      "Trimmed video + audio ready ✅";
 
-    } catch (error) {
-      console.error(
-        "Export error:",
-        error
-      );
+    // Cleanup
+    combinedStream.getTracks().forEach(track => {
+      track.stop();
+    });
 
-      exportStatus.textContent =
-        "❌ ERROR: " +
-        (error.message || error);
+    videoStream.getTracks().forEach(track => {
+      track.stop();
+    });
 
-    } finally {
-      exportTrim.disabled = false;
-      previewTrim.disabled = false;
-    }
+    audioContext.close();
+
+  } catch (error) {
+
+    console.error(
+      "Export error:",
+      error
+    );
+
+    exportStatus.textContent =
+      "Export failed: " +
+      error.message;
+
+  } finally {
+
+    exportTrim.disabled = false;
+    previewTrim.disabled = false;
   }
-);
+});
