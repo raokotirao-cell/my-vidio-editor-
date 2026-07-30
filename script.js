@@ -339,16 +339,18 @@ exportTrim.addEventListener("click", async () => {
     exportStatus.textContent =
       "✅ MP4 export completed!";
 
-     } catch (error) {
+       } catch (error) {
 
-  console.error("Export error:", error);
+    console.error("Export error:", error);
 
-  exportStatus.textContent =
-    "❌ ERROR: " + (error.message || error);
+    exportStatus.textContent =
+      "❌ ERROR: " + (error.message || error);
 
-  alert(
-    "Export failed:\n\n" +
-    (error.message || error)
-  );
+    alert(
+      "Export failed:\n\n" +
+      (error.message || error)
+    );
 
-}
+  }
+
+});
