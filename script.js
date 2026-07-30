@@ -32,7 +32,8 @@ const downloadMusic = document.getElementById("downloadMusic");
 
 let videoURL = null;
 let downloadURL = null;
-
+let sharedAudioContext = null;
+let sharedVideoSource = null;
 let musicURL = null;
 let selectedMusic = null;
 let musicDownloadURL = null;
