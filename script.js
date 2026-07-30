@@ -19,18 +19,16 @@ addVideo.addEventListener("click", () => {
   videoInput.click();
 });
 
-// Load Video
+// Load video
 videoInput.addEventListener("change", () => {
   const file = videoInput.files[0];
 
   if (!file) return;
 
-  // Remove old video URL
   if (videoURL) {
     URL.revokeObjectURL(videoURL);
   }
 
-  // Remove old download
   if (downloadURL) {
     URL.revokeObjectURL(downloadURL);
     downloadURL = null;
@@ -47,7 +45,7 @@ videoInput.addEventListener("change", () => {
   trimControls.style.display = "block";
 });
 
-// Video loaded
+// Metadata loaded
 videoPreview.addEventListener("loadedmetadata", () => {
   const duration = videoPreview.duration;
 
@@ -58,7 +56,7 @@ videoPreview.addEventListener("loadedmetadata", () => {
   endTime.max = duration;
 });
 
-// Preview Trim
+// Preview trim
 previewTrim.addEventListener("click", async () => {
   const start = Number(startTime.value);
   const end = Number(endTime.value);
@@ -75,23 +73,19 @@ previewTrim.addEventListener("click", async () => {
   videoPreview.pause();
   videoPreview.currentTime = start;
 
-  try {
-    await videoPreview.play();
-  } catch (error) {
-    console.log("Preview play error:", error);
-  }
+  await videoPreview.play();
 
-  const stopTrim = () => {
+  const stopPreview = () => {
     if (videoPreview.currentTime >= end) {
       videoPreview.pause();
-      videoPreview.removeEventListener("timeupdate", stopTrim);
+      videoPreview.removeEventListener("timeupdate", stopPreview);
     }
   };
 
-  videoPreview.addEventListener("timeupdate", stopTrim);
+  videoPreview.addEventListener("timeupdate", stopPreview);
 });
 
-// Export Trimmed Video
+// EXPORT
 exportTrim.addEventListener("click", async () => {
   const start = Number(startTime.value);
   const end = Number(endTime.value);
@@ -110,47 +104,67 @@ exportTrim.addEventListener("click", async () => {
     return;
   }
 
-  if (!videoPreview.captureStream) {
-    alert("Your browser does not support video export.");
-    return;
-  }
-
-  if (!window.MediaRecorder) {
-    alert("Your browser does not support video recording.");
-    return;
-  }
-
   try {
     exportTrim.disabled = true;
     previewTrim.disabled = true;
 
     downloadVideo.style.display = "none";
-    exportStatus.textContent = "Exporting trimmed video...";
+    exportStatus.textContent = "Preparing export...";
 
-    // Move video to start point
-    videoPreview.pause();
-    videoPreview.currentTime = start;
+    // --------------------------------
+    // Canvas for video
+    // --------------------------------
 
-    await new Promise((resolve) => {
-      const checkTime = () => {
-        if (Math.abs(videoPreview.currentTime - start) < 0.15) {
-          videoPreview.removeEventListener("timeupdate", checkTime);
-          resolve();
-        }
-      };
+    const canvas = document.createElement("canvas");
 
-      videoPreview.addEventListener("timeupdate", checkTime);
+    canvas.width = videoPreview.videoWidth;
+    canvas.height = videoPreview.videoHeight;
 
-      setTimeout(() => {
-        videoPreview.removeEventListener("timeupdate", checkTime);
-        resolve();
-      }, 1000);
+    const ctx = canvas.getContext("2d");
+
+    // --------------------------------
+    // Audio context
+    // --------------------------------
+
+    const AudioContext =
+      window.AudioContext || window.webkitAudioContext;
+
+    const audioContext = new AudioContext();
+
+    const source =
+      audioContext.createMediaElementSource(videoPreview);
+
+    const destination =
+      audioContext.createMediaStreamDestination();
+
+    source.connect(destination);
+
+    // --------------------------------
+    // Video canvas stream
+    // --------------------------------
+
+    const videoStream =
+      canvas.captureStream(30);
+
+    // --------------------------------
+    // Combine video + audio
+    // --------------------------------
+
+    const combinedStream =
+      new MediaStream();
+
+    videoStream.getVideoTracks().forEach(track => {
+      combinedStream.addTrack(track);
     });
 
-    // Capture video stream
-    const stream = videoPreview.captureStream();
+    destination.stream.getAudioTracks().forEach(track => {
+      combinedStream.addTrack(track);
+    });
 
-    // Check supported format
+    // --------------------------------
+    // Recorder
+    // --------------------------------
+
     let mimeType = "";
 
     const formats = [
@@ -167,36 +181,101 @@ exportTrim.addEventListener("click", async () => {
     }
 
     if (!mimeType) {
-      throw new Error("WebM format is not supported.");
+      throw new Error("WebM recording is not supported.");
     }
 
-    const recorder = new MediaRecorder(stream, {
-      mimeType: mimeType
-    });
+    const recorder = new MediaRecorder(
+      combinedStream,
+      {
+        mimeType: mimeType
+      }
+    );
 
     const chunks = [];
 
-    recorder.ondataavailable = (event) => {
+    recorder.ondataavailable = event => {
       if (event.data && event.data.size > 0) {
         chunks.push(event.data);
       }
     };
 
-    const recordingFinished = new Promise((resolve) => {
+    const finished = new Promise(resolve => {
       recorder.onstop = resolve;
     });
 
-    // Start recording
-    recorder.start();
+    // --------------------------------
+    // Move to start
+    // --------------------------------
 
-    videoPreview.currentTime = start;
+    videoPreview.pause();
+
+    await new Promise(resolve => {
+      const ready = () => {
+        videoPreview.removeEventListener(
+          "seeked",
+          ready
+        );
+        resolve();
+      };
+
+      videoPreview.addEventListener(
+        "seeked",
+        ready
+      );
+
+      videoPreview.currentTime = start;
+    });
+
+    // --------------------------------
+    // Start recording
+    // --------------------------------
+
+    recorder.start(200);
+
+    await audioContext.resume();
 
     await videoPreview.play();
 
+    exportStatus.textContent =
+      "Exporting video + audio...";
+
+    // --------------------------------
+    // Draw video frames
+    // --------------------------------
+
+    let drawing = true;
+
+    const drawFrame = () => {
+      if (!drawing) return;
+
+      ctx.drawImage(
+        videoPreview,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      );
+
+      requestAnimationFrame(drawFrame);
+    };
+
+    drawFrame();
+
+    // --------------------------------
+    // Stop exactly at end
+    // --------------------------------
+
     const stopExport = () => {
       if (videoPreview.currentTime >= end) {
+
+        drawing = false;
+
         videoPreview.pause();
-        videoPreview.removeEventListener("timeupdate", stopExport);
+
+        videoPreview.removeEventListener(
+          "timeupdate",
+          stopExport
+        );
 
         if (recorder.state !== "inactive") {
           recorder.stop();
@@ -204,31 +283,84 @@ exportTrim.addEventListener("click", async () => {
       }
     };
 
-    videoPreview.addEventListener("timeupdate", stopExport);
+    videoPreview.addEventListener(
+      "timeupdate",
+      stopExport
+    );
 
-    // Wait for recorder
-    await recordingFinished;
+    // Safety timeout
+    const durationMs =
+      ((end - start) + 2) * 1000;
 
-    // Create final file
-    const blob = new Blob(chunks, {
-      type: "video/webm"
+    setTimeout(() => {
+      drawing = false;
+
+      videoPreview.pause();
+
+      videoPreview.removeEventListener(
+        "timeupdate",
+        stopExport
+      );
+
+      if (recorder.state !== "inactive") {
+        recorder.stop();
+      }
+    }, durationMs);
+
+    // Wait for recording to finish
+    await finished;
+
+    // --------------------------------
+    // Create file
+    // --------------------------------
+
+    const blob = new Blob(
+      chunks,
+      {
+        type: "video/webm"
+      }
+    );
+
+    downloadURL =
+      URL.createObjectURL(blob);
+
+    downloadVideo.href = downloadURL;
+    downloadVideo.download =
+      "trimmed-video.webm";
+
+    downloadVideo.textContent =
+      "Download Trimmed Video";
+
+    downloadVideo.style.display =
+      "inline-block";
+
+    exportStatus.textContent =
+      "Trimmed video + audio ready ✅";
+
+    // Cleanup
+    combinedStream.getTracks().forEach(track => {
+      track.stop();
     });
 
-    downloadURL = URL.createObjectURL(blob);
+    videoStream.getTracks().forEach(track => {
+      track.stop();
+    });
 
-    // Download link
-    downloadVideo.href = downloadURL;
-    downloadVideo.download = "trimmed-video.webm";
-    downloadVideo.textContent = "Download Trimmed Video";
-    downloadVideo.style.display = "inline-block";
-
-    exportStatus.textContent = "Trimmed video ready ✅";
+    audioContext.close();
 
   } catch (error) {
-    console.error("Export error:", error);
+
+    console.error(
+      "Export error:",
+      error
+    );
+
     exportStatus.textContent =
-      "Export failed: " + error.message;
+      "Export failed: " +
+      error.message;
+
   } finally {
+
     exportTrim.disabled = false;
     previewTrim.disabled = false;
   }
