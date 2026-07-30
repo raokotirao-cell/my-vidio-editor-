@@ -183,21 +183,23 @@ async function loadFFmpeg() {
     });
 
     // Official FFmpeg core CDN
-    const baseURL =
-      "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
+    
+const baseURL = "/ffmpeg";
 
-    await ffmpeg.load({
-      coreURL: await toBlobURL(
-        `${baseURL}/ffmpeg-core.js`,
-        "text/javascript"
-      ),
+await ffmpeg.load({
+  coreURL: await toBlobURL(
+    `${baseURL}/ffmpeg-core.js`,
+    "text/javascript"
+  ),
 
-      wasmURL: await toBlobURL(
-        `${baseURL}/ffmpeg-core.wasm`,
-        "application/wasm"
-      )
-    });
+  wasmURL: await toBlobURL(
+    `${baseURL}/ffmpeg-core.wasm`,
+    "application/wasm"
+  ),
 
+  classWorkerURL:
+    `${window.location.origin}/ffmpeg/worker.js`
+});
     ffmpegReady = true;
 
     console.log("FFmpeg loaded successfully.");
