@@ -1,4 +1,4 @@
- const videoInput = document.getElementById("videoInput");
+const videoInput = document.getElementById("videoInput");
 const addVideo = document.getElementById("addVideo");
 const videoPreview = document.getElementById("videoPreview");
 
@@ -13,18 +13,13 @@ const exportStatus = document.getElementById("exportStatus");
 const downloadVideo = document.getElementById("downloadVideo");
 
 let selectedVideo = null;
-let originalVideoURL = null;
-let exportedVideoURL = null;
-
-let ffmpeg = null;
-let fetchFile = null;
-let toBlobURL = null;
-let ffmpegReady = false;
+let videoURL = null;
 
 
 // ===============================
-// SELECT VIDEO BUTTON
+// SELECT VIDEO
 // ===============================
+
 addVideo.addEventListener("click", () => {
   videoInput.click();
 });
@@ -33,6 +28,7 @@ addVideo.addEventListener("click", () => {
 // ===============================
 // VIDEO SELECTED
 // ===============================
+
 videoInput.addEventListener("change", () => {
 
   const file = videoInput.files[0];
@@ -43,14 +39,13 @@ videoInput.addEventListener("change", () => {
 
   selectedVideo = file;
 
-  // Remove old URL
-  if (originalVideoURL) {
-    URL.revokeObjectURL(originalVideoURL);
+  if (videoURL) {
+    URL.revokeObjectURL(videoURL);
   }
 
-  originalVideoURL = URL.createObjectURL(file);
+  videoURL = URL.createObjectURL(file);
 
-  videoPreview.src = originalVideoURL;
+  videoPreview.src = videoURL;
   videoPreview.style.display = "block";
 
   videoPreview.onloadedmetadata = () => {
@@ -66,7 +61,7 @@ videoInput.addEventListener("change", () => {
     trimControls.style.display = "block";
 
     exportStatus.textContent =
-      `Video loaded (${duration.toFixed(1)} seconds)`;
+      `Video loaded: ${duration.toFixed(1)} seconds`;
 
     downloadVideo.style.display = "none";
   };
@@ -76,6 +71,7 @@ videoInput.addEventListener("change", () => {
 // ===============================
 // PREVIEW TRIM
 // ===============================
+
 previewTrim.addEventListener("click", () => {
 
   if (!selectedVideo) {
@@ -126,11 +122,6 @@ previewTrim.addEventListener("click", () => {
     }
   };
 
-  videoPreview.removeEventListener(
-    "timeupdate",
-    stopPreview
-  );
-
   videoPreview.addEventListener(
     "timeupdate",
     stopPreview
@@ -139,212 +130,12 @@ previewTrim.addEventListener("click", () => {
 
 
 // ===============================
-// LOAD FFMPEG
+// EXPORT BUTTON
 // ===============================
 
-async function loadFFmpeg() {
-
-  if (ffmpegReady) {
-    return;
-  }
+exportTrim.addEventListener("click", () => {
 
   exportStatus.textContent =
-    "Loading video engine... Please wait.";
-
-  try {
-
-    const ffmpegModule = await import(
-      "https://esm.sh/@ffmpeg/ffmpeg@0.12.10"
-    );
-
-    const utilModule = await import(
-      "https://esm.sh/@ffmpeg/util@0.12.2"
-    );
-
-    const FFmpeg = ffmpegModule.FFmpeg;
-
-    fetchFile = utilModule.fetchFile;
-    toBlobURL = utilModule.toBlobURL;
-
-    ffmpeg = new FFmpeg();
-
-    ffmpeg.on("log", ({ message }) => {
-      console.log("FFmpeg:", message);
-    });
-
-    ffmpeg.on("progress", ({ progress }) => {
-      exportStatus.textContent =
-        `Exporting video... ${Math.round(progress * 100)}%`;
-    });
-
-    const baseURL = "/ffmpeg";
-
-    await ffmpeg.load({
-      coreURL: await toBlobURL(
-        `${baseURL}/ffmpeg-core.js`,
-        "text/javascript"
-      ),
-
-      wasmURL: await toBlobURL(
-        `${baseURL}/ffmpeg-core.wasm`,
-        "application/wasm"
-      )
-    });
-
-    ffmpegReady = true;
-
-    exportStatus.textContent =
-      "✅ Video engine ready.";
-
-    } catch (error) {
-
-    console.error("FFmpeg loading error:", error);
-
-    exportStatus.textContent =
-      "❌ LOAD ERROR: " + (error.message || error);
-
-    throw error;
-  }
-}
-
-
-// ===============================
-// EXPORT TRIMMED MP4
-// ===============================
-exportTrim.addEventListener("click", async () => {
-
-  if (!selectedVideo) {
-    alert("Please select a video first.");
-    return;
-  }
-
-  const start = parseFloat(startTime.value);
-  const end = parseFloat(endTime.value);
-
-  if (isNaN(start) || isNaN(end)) {
-    alert("Please enter valid times.");
-    return;
-  }
-
-  if (start < 0) {
-    alert("Start time cannot be negative.");
-    return;
-  }
-
-  if (end <= start) {
-    alert("End time must be greater than Start time.");
-    return;
-  }
-
-  if (end > videoPreview.duration) {
-    alert("End time is longer than the video.");
-    return;
-  }
-
-  try {
-
-    exportTrim.disabled = true;
-    previewTrim.disabled = true;
-
-    downloadVideo.style.display = "none";
-
-    await loadFFmpeg();
-
-    exportStatus.textContent =
-      "Preparing video...";
-
-    const inputName = "input.mp4";
-    const outputName = "trimmed.mp4";
-
-    // Put selected video into FFmpeg memory
-    await ffmpeg.writeFile(
-      inputName,
-      await fetchFile(selectedVideo)
-    );
-
-    const duration = end - start;
-
-    exportStatus.textContent =
-      "Trimming video...";
-
-    await ffmpeg.exec([
-      "-ss",
-      String(start),
-
-      "-i",
-      inputName,
-
-      "-t",
-      String(duration),
-
-      "-c:v",
-      "libx264",
-
-      "-preset",
-      "veryfast",
-
-      "-crf",
-      "23",
-
-      "-c:a",
-      "aac",
-
-      "-movflags",
-      "+faststart",
-
-      outputName
-    ]);
-
-    // Read exported MP4
-    const data =
-      await ffmpeg.readFile(outputName);
-
-    const blob = new Blob(
-      [data.buffer],
-      {
-        type: "video/mp4"
-      }
-    );
-
-    // Remove previous exported URL
-    if (exportedVideoURL) {
-      URL.revokeObjectURL(exportedVideoURL);
-    }
-
-    exportedVideoURL =
-      URL.createObjectURL(blob);
-
-    // Show trimmed video
-    videoPreview.src =
-      exportedVideoURL;
-
-    videoPreview.load();
-
-    // Download link
-    downloadVideo.href =
-      exportedVideoURL;
-
-    downloadVideo.download =
-      "trimmed-video.mp4";
-
-    downloadVideo.style.display =
-      "inline-block";
-
-    exportStatus.textContent =
-      "✅ MP4 export completed!";
-
-       } catch (error) {
-
-    console.error("Export error:", error);
-
-    exportStatus.textContent =
-      "❌ ERROR: " + (error.message || error);
-
-    alert(
-      "Export failed:\n\n" +
-      (error.message || error)
-    );
-
-  }
+    "MP4 export is temporarily disabled.";
 
 });
