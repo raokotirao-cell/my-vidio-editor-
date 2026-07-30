@@ -334,3 +334,777 @@ exportTrim.addEventListener("click", async () => {
     previewTrim.disabled = false;
   }
 });
+// ============================================
+// MUSIC FEATURE
+// ============================================
+
+let selectedMusic = null;
+let musicURL = null;
+let musicDownloadURL = null;
+
+
+// --------------------------------------------
+// MUSIC ELEMENTS
+// --------------------------------------------
+
+const musicControls =
+  document.getElementById("musicControls");
+
+const audioInput =
+  document.getElementById("audioInput");
+
+const addMusic =
+  document.getElementById("addMusic");
+
+const musicStatus =
+  document.getElementById("musicStatus");
+
+const musicVolume =
+  document.getElementById("musicVolume");
+
+const musicVolumeValue =
+  document.getElementById("musicVolumeValue");
+
+const exportMusic =
+  document.getElementById("exportMusic");
+
+const downloadMusic =
+  document.getElementById("downloadMusic");
+
+
+// --------------------------------------------
+// SHOW MUSIC AFTER VIDEO SELECT
+// --------------------------------------------
+
+if (musicControls) {
+  musicControls.style.display = "block";
+}
+
+
+// --------------------------------------------
+// SELECT MUSIC
+// --------------------------------------------
+
+if (addMusic && audioInput) {
+
+  addMusic.addEventListener("click", () => {
+    audioInput.click();
+  });
+
+}
+
+
+// --------------------------------------------
+// MUSIC SELECTED
+// --------------------------------------------
+
+if (audioInput) {
+
+  audioInput.addEventListener("change", () => {
+
+    const file = audioInput.files[0];
+
+    if (!file) {
+      return;
+    }
+
+    selectedMusic = file;
+
+    if (musicURL) {
+      URL.revokeObjectURL(musicURL);
+    }
+
+    musicURL =
+      URL.createObjectURL(file);
+
+    if (musicStatus) {
+      musicStatus.textContent =
+        `Music selected: ${file.name}`;
+    }
+
+  });
+
+}
+
+
+// --------------------------------------------
+// MUSIC VOLUME
+// --------------------------------------------
+
+if (musicVolume) {
+
+  musicVolume.addEventListener(
+    "input",
+    () => {
+
+      const value =
+        Math.round(
+          Number(musicVolume.value) * 100
+        );
+
+      if (musicVolumeValue) {
+        musicVolumeValue.textContent =
+          `${value}%`;
+      }
+
+    }
+  );
+
+}
+
+
+// --------------------------------------------
+// EXPORT VIDEO WITH MUSIC
+// --------------------------------------------
+
+if (exportMusic) {
+
+  exportMusic.addEventListener(
+    "click",
+    async () => {
+
+      if (!videoURL) {
+
+        alert(
+          "Please select a video first."
+        );
+
+        return;
+      }
+
+
+      if (!selectedMusic) {
+
+        alert(
+          "Please select music first."
+        );
+
+        return;
+      }
+
+
+      const start =
+        Number(startTime.value);
+
+      const end =
+        Number(endTime.value);
+
+
+      if (
+        !Number.isFinite(start) ||
+        !Number.isFinite(end) ||
+        start < 0 ||
+        end <= start
+      ) {
+
+        alert(
+          "Please enter valid Start and End times."
+        );
+
+        return;
+      }
+
+
+      try {
+
+        exportMusic.disabled = true;
+        exportTrim.disabled = true;
+        previewTrim.disabled = true;
+
+        if (downloadMusic) {
+          downloadMusic.style.display =
+            "none";
+        }
+
+        if (musicStatus) {
+          musicStatus.textContent =
+            "Preparing video and music...";
+        }
+
+        exportStatus.textContent =
+          "Preparing music export...";
+
+
+        // ------------------------------------
+        // CREATE SEPARATE VIDEO ELEMENT
+        // ------------------------------------
+
+        const exportVideo =
+          document.createElement("video");
+
+        exportVideo.src =
+          videoURL;
+
+        exportVideo.preload =
+          "auto";
+
+        exportVideo.playsInline =
+          true;
+
+        exportVideo.crossOrigin =
+          "anonymous";
+
+
+        // ------------------------------------
+        // WAIT FOR VIDEO
+        // ------------------------------------
+
+        await new Promise(
+          (resolve, reject) => {
+
+            exportVideo.onloadedmetadata =
+              resolve;
+
+            exportVideo.onerror =
+              () => {
+                reject(
+                  new Error(
+                    "Could not load video."
+                  )
+                );
+              };
+
+          }
+        );
+
+
+        if (end > exportVideo.duration) {
+
+          throw new Error(
+            "End time is longer than video duration."
+          );
+
+        }
+
+
+        // ------------------------------------
+        // CANVAS
+        // ------------------------------------
+
+        const canvas =
+          document.createElement("canvas");
+
+        canvas.width =
+          exportVideo.videoWidth;
+
+        canvas.height =
+          exportVideo.videoHeight;
+
+        const ctx =
+          canvas.getContext("2d");
+
+
+        // ------------------------------------
+        // AUDIO CONTEXT
+        // ------------------------------------
+
+        const AudioContext =
+          window.AudioContext ||
+          window.webkitAudioContext;
+
+        const audioContext =
+          new AudioContext();
+
+
+        // ------------------------------------
+        // OUTPUT AUDIO
+        // ------------------------------------
+
+        const destination =
+          audioContext.createMediaStreamDestination();
+
+
+        // ------------------------------------
+        // VIDEO AUDIO
+        // ------------------------------------
+
+        const videoSource =
+          audioContext.createMediaElementSource(
+            exportVideo
+          );
+
+        const videoGain =
+          audioContext.createGain();
+
+        videoGain.gain.value = 1;
+
+        videoSource.connect(
+          videoGain
+        );
+
+        videoGain.connect(
+          destination
+        );
+
+
+        // ------------------------------------
+        // MUSIC AUDIO
+        // ------------------------------------
+
+        const musicAudio =
+          document.createElement("audio");
+
+        musicAudio.src =
+          musicURL;
+
+        musicAudio.preload =
+          "auto";
+
+        musicAudio.loop =
+          true;
+
+        musicAudio.crossOrigin =
+          "anonymous";
+
+
+        await new Promise(
+          (resolve, reject) => {
+
+            musicAudio.oncanplay =
+              resolve;
+
+            musicAudio.onerror =
+              () => {
+                reject(
+                  new Error(
+                    "Could not load music."
+                  )
+                );
+              };
+
+            musicAudio.load();
+
+          }
+        );
+
+
+        const musicSource =
+          audioContext.createMediaElementSource(
+            musicAudio
+          );
+
+        const musicGain =
+          audioContext.createGain();
+
+        musicGain.gain.value =
+          Number(
+            musicVolume
+              ? musicVolume.value
+              : 0.5
+          );
+
+        musicSource.connect(
+          musicGain
+        );
+
+        musicGain.connect(
+          destination
+        );
+
+
+        // ------------------------------------
+        // VIDEO STREAM
+        // ------------------------------------
+
+        const videoStream =
+          canvas.captureStream(30);
+
+
+        // ------------------------------------
+        // COMBINED STREAM
+        // ------------------------------------
+
+        const combinedStream =
+          new MediaStream();
+
+
+        videoStream
+          .getVideoTracks()
+          .forEach(track => {
+            combinedStream.addTrack(
+              track
+            );
+          });
+
+
+        destination
+          .stream
+          .getAudioTracks()
+          .forEach(track => {
+            combinedStream.addTrack(
+              track
+            );
+          });
+
+
+        // ------------------------------------
+        // RECORDER
+        // ------------------------------------
+
+        let mimeType = "";
+
+        const formats = [
+          "video/webm;codecs=vp9,opus",
+          "video/webm;codecs=vp8,opus",
+          "video/webm"
+        ];
+
+
+        for (
+          const format of formats
+        ) {
+
+          if (
+            MediaRecorder.isTypeSupported(
+              format
+            )
+          ) {
+
+            mimeType =
+              format;
+
+            break;
+
+          }
+
+        }
+
+
+        if (!mimeType) {
+
+          throw new Error(
+            "WebM recording is not supported."
+          );
+
+        }
+
+
+        const recorder =
+          new MediaRecorder(
+            combinedStream,
+            {
+              mimeType:
+                mimeType
+            }
+          );
+
+
+        const chunks = [];
+
+
+        recorder.ondataavailable =
+          event => {
+
+            if (
+              event.data &&
+              event.data.size > 0
+            ) {
+
+              chunks.push(
+                event.data
+              );
+
+            }
+
+          };
+
+
+        const finished =
+          new Promise(
+            resolve => {
+
+              recorder.onstop =
+                resolve;
+
+            }
+          );
+
+
+        // ------------------------------------
+        // SEEK VIDEO
+        // ------------------------------------
+
+        await new Promise(
+          resolve => {
+
+            const seeked =
+              () => {
+
+                exportVideo
+                  .removeEventListener(
+                    "seeked",
+                    seeked
+                  );
+
+                resolve();
+
+              };
+
+
+            exportVideo.addEventListener(
+              "seeked",
+              seeked
+            );
+
+
+            exportVideo.currentTime =
+              start;
+
+          }
+        );
+
+
+        // ------------------------------------
+        // START
+        // ------------------------------------
+
+        await audioContext.resume();
+
+
+        recorder.start(200);
+
+
+        await exportVideo.play();
+        await musicAudio.play();
+
+
+        exportStatus.textContent =
+          "Exporting video with music...";
+
+
+        // ------------------------------------
+        // DRAW VIDEO
+        // ------------------------------------
+
+        let drawing = true;
+
+
+        const drawFrame = () => {
+
+          if (!drawing) {
+            return;
+          }
+
+
+          ctx.drawImage(
+            exportVideo,
+            0,
+            0,
+            canvas.width,
+            canvas.height
+          );
+
+
+          requestAnimationFrame(
+            drawFrame
+          );
+
+        };
+
+
+        drawFrame();
+
+
+        // ------------------------------------
+        // STOP
+        // ------------------------------------
+
+        const stopExport =
+          () => {
+
+            if (
+              exportVideo.currentTime >=
+              end
+            ) {
+
+              drawing = false;
+
+              exportVideo.pause();
+              musicAudio.pause();
+
+
+              exportVideo.removeEventListener(
+                "timeupdate",
+                stopExport
+              );
+
+
+              if (
+                recorder.state !==
+                "inactive"
+              ) {
+
+                recorder.stop();
+
+              }
+
+            }
+
+          };
+
+
+        exportVideo.addEventListener(
+          "timeupdate",
+          stopExport
+        );
+
+
+        // ------------------------------------
+        // SAFETY TIMEOUT
+        // ------------------------------------
+
+        const durationMs =
+          ((end - start) + 3) * 1000;
+
+
+        const timeoutId =
+          setTimeout(
+            () => {
+
+              drawing = false;
+
+              exportVideo.pause();
+              musicAudio.pause();
+
+
+              exportVideo.removeEventListener(
+                "timeupdate",
+                stopExport
+              );
+
+
+              if (
+                recorder.state !==
+                "inactive"
+              ) {
+
+                recorder.stop();
+
+              }
+
+            },
+            durationMs
+          );
+
+
+        // ------------------------------------
+        // WAIT
+        // ------------------------------------
+
+        await finished;
+
+
+        clearTimeout(
+          timeoutId
+        );
+
+
+        // ------------------------------------
+        // OUTPUT
+        // ------------------------------------
+
+        const blob =
+          new Blob(
+            chunks,
+            {
+              type:
+                "video/webm"
+            }
+          );
+
+
+        if (musicDownloadURL) {
+          URL.revokeObjectURL(
+            musicDownloadURL
+          );
+        }
+
+
+        musicDownloadURL =
+          URL.createObjectURL(
+            blob
+          );
+
+
+        if (downloadMusic) {
+
+          downloadMusic.href =
+            musicDownloadURL;
+
+          downloadMusic.download =
+            "video-with-music.webm";
+
+          downloadMusic.textContent =
+            "Download Video With Music";
+
+          downloadMusic.style.display =
+            "inline-block";
+
+        }
+
+
+        exportStatus.textContent =
+          "✅ Video with music ready!";
+
+
+        if (musicStatus) {
+
+          musicStatus.textContent =
+            "Music export completed ✅";
+
+        }
+
+
+        // ------------------------------------
+        // CLEANUP
+        // ------------------------------------
+
+        exportVideo.pause();
+        musicAudio.pause();
+
+        combinedStream
+          .getTracks()
+          .forEach(
+            track => track.stop()
+          );
+
+        videoStream
+          .getTracks()
+          .forEach(
+            track => track.stop()
+          );
+
+        await audioContext.close();
+
+      } catch (error) {
+
+        console.error(
+          "Music export error:",
+          error
+        );
+
+
+        exportStatus.textContent =
+          "❌ Music export failed: " +
+          error.message;
+
+
+        if (musicStatus) {
+
+          musicStatus.textContent =
+            "Music export failed.";
+
+        }
+
+      } finally {
+
+        exportMusic.disabled = false;
+        exportTrim.disabled = false;
+        previewTrim.disabled = false;
+
+      }
+
+    }
+  );
+
+}
