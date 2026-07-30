@@ -258,9 +258,7 @@ exportTrim.addEventListener(
         new AudioContext();
 
       const source =
-        audioContext.createMediaElementSource(
-          videoPreview
-        );
+  getVideoAudioSource().videoSource;
 
       const destination =
         audioContext.createMediaStreamDestination();
