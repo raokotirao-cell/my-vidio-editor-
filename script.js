@@ -1,3 +1,4 @@
+ ```javascript
 const videoInput = document.getElementById("videoInput");
 const videoPreview = document.getElementById("videoPreview");
 const addVideo = document.getElementById("addVideo");
@@ -32,16 +33,32 @@ const downloadMusic = document.getElementById("downloadMusic");
 
 let videoURL = null;
 let downloadURL = null;
+
+let musicURL = null;
+let selectedMusic = null;
+let musicDownloadURL = null;
+
 let sharedAudioContext = null;
 let sharedVideoSource = null;
+
+
+// ============================================
+// SHARED VIDEO AUDIO SOURCE
+// ============================================
+
 function getVideoAudioSource() {
   if (!sharedAudioContext) {
     const AudioContext =
       window.AudioContext ||
       window.webkitAudioContext;
 
-    sharedAudioContext =
-      new AudioContext();
+    if (!AudioContext) {
+      throw new Error(
+        "Web Audio API is not supported in this browser."
+      );
+    }
+
+    sharedAudioContext = new AudioContext();
   }
 
   if (!sharedVideoSource) {
@@ -56,9 +73,6 @@ function getVideoAudioSource() {
     videoSource: sharedVideoSource
   };
 }
-let musicURL = null;
-let selectedMusic = null;
-let musicDownloadURL = null;
 
 
 // ============================================
@@ -77,7 +91,9 @@ addVideo.addEventListener("click", () => {
 videoInput.addEventListener("change", () => {
   const file = videoInput.files[0];
 
-  if (!file) return;
+  if (!file) {
+    return;
+  }
 
   if (videoURL) {
     URL.revokeObjectURL(videoURL);
@@ -107,16 +123,20 @@ videoInput.addEventListener("change", () => {
 
   videoPreview.src = videoURL;
   videoPreview.style.display = "block";
+  videoPreview.controls = true;
 
   trimControls.style.display = "block";
 
-  // Show music section
   if (musicControls) {
     musicControls.style.display = "block";
   }
 
   if (musicStatus) {
     musicStatus.textContent = "No music selected.";
+  }
+
+  if (selectedMusic) {
+    selectedMusic = null;
   }
 });
 
@@ -146,11 +166,12 @@ videoPreview.addEventListener(
 previewTrim.addEventListener(
   "click",
   async () => {
-
     const start = Number(startTime.value);
     const end = Number(endTime.value);
 
     if (
+      !Number.isFinite(start) ||
+      !Number.isFinite(end) ||
       start < 0 ||
       end <= start ||
       end > videoPreview.duration
@@ -162,15 +183,16 @@ previewTrim.addEventListener(
     }
 
     videoPreview.pause();
-
     videoPreview.currentTime = start;
 
-    await videoPreview.play();
+    try {
+      await videoPreview.play();
+    } catch (error) {
+      console.log("Preview play:", error);
+    }
 
     const stopPreview = () => {
-
       if (videoPreview.currentTime >= end) {
-
         videoPreview.pause();
 
         videoPreview.removeEventListener(
@@ -195,18 +217,17 @@ previewTrim.addEventListener(
 exportTrim.addEventListener(
   "click",
   async () => {
-
     const start = Number(startTime.value);
     const end = Number(endTime.value);
 
     if (!videoPreview.src) {
-      alert(
-        "Please select a video first."
-      );
+      alert("Please select a video first.");
       return;
     }
 
     if (
+      !Number.isFinite(start) ||
+      !Number.isFinite(end) ||
       start < 0 ||
       end <= start ||
       end > videoPreview.duration
@@ -218,12 +239,10 @@ exportTrim.addEventListener(
     }
 
     try {
-
       exportTrim.disabled = true;
       previewTrim.disabled = true;
 
-      downloadVideo.style.display =
-        "none";
+      downloadVideo.style.display = "none";
 
       exportStatus.textContent =
         "Preparing export...";
@@ -247,23 +266,18 @@ exportTrim.addEventListener(
 
 
       // --------------------------------
-      // Audio Context
+      // Shared Audio Context
       // --------------------------------
 
-      const AudioContext =
-        window.AudioContext ||
-        window.webkitAudioContext;
-
-      const audioContext =
-        new AudioContext();
-
-      const source =
-  getVideoAudioSource().videoSource;
+      const {
+        audioContext,
+        videoSource
+      } = getVideoAudioSource();
 
       const destination =
         audioContext.createMediaStreamDestination();
 
-      source.connect(destination);
+      videoSource.connect(destination);
 
 
       // --------------------------------
@@ -308,11 +322,8 @@ exportTrim.addEventListener(
       ];
 
       for (const format of formats) {
-
         if (
-          MediaRecorder.isTypeSupported(
-            format
-          )
+          MediaRecorder.isTypeSupported(format)
         ) {
           mimeType = format;
           break;
@@ -329,7 +340,7 @@ exportTrim.addEventListener(
         new MediaRecorder(
           combinedStream,
           {
-            mimeType: mimeType
+            mimeType
           }
         );
 
@@ -337,14 +348,11 @@ exportTrim.addEventListener(
 
       recorder.ondataavailable =
         event => {
-
           if (
             event.data &&
             event.data.size > 0
           ) {
-            chunks.push(
-              event.data
-            );
+            chunks.push(event.data);
           }
         };
 
@@ -361,9 +369,7 @@ exportTrim.addEventListener(
       videoPreview.pause();
 
       await new Promise(resolve => {
-
         const ready = () => {
-
           videoPreview.removeEventListener(
             "seeked",
             ready
@@ -377,8 +383,7 @@ exportTrim.addEventListener(
           ready
         );
 
-        videoPreview.currentTime =
-          start;
+        videoPreview.currentTime = start;
       });
 
 
@@ -403,8 +408,9 @@ exportTrim.addEventListener(
       let drawing = true;
 
       const drawFrame = () => {
-
-        if (!drawing) return;
+        if (!drawing) {
+          return;
+        }
 
         ctx.drawImage(
           videoPreview,
@@ -414,9 +420,7 @@ exportTrim.addEventListener(
           canvas.height
         );
 
-        requestAnimationFrame(
-          drawFrame
-        );
+        requestAnimationFrame(drawFrame);
       };
 
       drawFrame();
@@ -427,12 +431,9 @@ exportTrim.addEventListener(
       // --------------------------------
 
       const stopExport = () => {
-
         if (
-          videoPreview.currentTime >=
-          end
+          videoPreview.currentTime >= end
         ) {
-
           drawing = false;
 
           videoPreview.pause();
@@ -443,8 +444,7 @@ exportTrim.addEventListener(
           );
 
           if (
-            recorder.state !==
-            "inactive"
+            recorder.state !== "inactive"
           ) {
             recorder.stop();
           }
@@ -464,28 +464,28 @@ exportTrim.addEventListener(
       const durationMs =
         ((end - start) + 2) * 1000;
 
-      setTimeout(() => {
+      const timeoutId =
+        setTimeout(() => {
+          drawing = false;
 
-        drawing = false;
+          videoPreview.pause();
 
-        videoPreview.pause();
+          videoPreview.removeEventListener(
+            "timeupdate",
+            stopExport
+          );
 
-        videoPreview.removeEventListener(
-          "timeupdate",
-          stopExport
-        );
-
-        if (
-          recorder.state !==
-          "inactive"
-        ) {
-          recorder.stop();
-        }
-
-      }, durationMs);
+          if (
+            recorder.state !== "inactive"
+          ) {
+            recorder.stop();
+          }
+        }, durationMs);
 
 
       await finished;
+
+      clearTimeout(timeoutId);
 
 
       // --------------------------------
@@ -501,9 +501,7 @@ exportTrim.addEventListener(
         );
 
       downloadURL =
-        URL.createObjectURL(
-          blob
-        );
+        URL.createObjectURL(blob);
 
       downloadVideo.href =
         downloadURL;
@@ -537,10 +535,7 @@ exportTrim.addEventListener(
           track.stop();
         });
 
-      await audioContext.close();
-
     } catch (error) {
-
       console.error(
         "Export error:",
         error
@@ -551,7 +546,6 @@ exportTrim.addEventListener(
         error.message;
 
     } finally {
-
       exportTrim.disabled = false;
       previewTrim.disabled = false;
     }
@@ -564,11 +558,12 @@ exportTrim.addEventListener(
 // ============================================
 
 if (addMusic) {
-
   addMusic.addEventListener(
     "click",
     () => {
-      audioInput.click();
+      if (audioInput) {
+        audioInput.click();
+      }
     }
   );
 }
@@ -579,31 +574,28 @@ if (addMusic) {
 // ============================================
 
 if (audioInput) {
-
   audioInput.addEventListener(
     "change",
     () => {
+      const file = audioInput.files[0];
 
-      const file =
-        audioInput.files[0];
-
-      if (!file) return;
+      if (!file) {
+        return;
+      }
 
       selectedMusic = file;
 
       if (musicURL) {
-        URL.revokeObjectURL(
-          musicURL
-        );
+        URL.revokeObjectURL(musicURL);
       }
 
       musicURL =
-        URL.createObjectURL(
-          file
-        );
+        URL.createObjectURL(file);
 
-      musicStatus.textContent =
-        `Music selected: ${file.name}`;
+      if (musicStatus) {
+        musicStatus.textContent =
+          `Music selected: ${file.name}`;
+      }
 
       if (exportMusic) {
         exportMusic.disabled = false;
@@ -618,11 +610,9 @@ if (audioInput) {
 // ============================================
 
 if (musicVolume) {
-
   musicVolume.addEventListener(
     "input",
     () => {
-
       const value =
         Math.round(
           Number(musicVolume.value) * 100
@@ -642,26 +632,21 @@ if (musicVolume) {
 // ============================================
 
 if (exportMusic) {
-
   exportMusic.addEventListener(
     "click",
     async () => {
 
       if (!videoPreview.src) {
-
         alert(
           "Please select a video first."
         );
-
         return;
       }
 
       if (!selectedMusic) {
-
         alert(
           "Please select music first."
         );
-
         return;
       }
 
@@ -672,20 +657,19 @@ if (exportMusic) {
         Number(endTime.value);
 
       if (
+        !Number.isFinite(start) ||
+        !Number.isFinite(end) ||
         start < 0 ||
         end <= start ||
         end > videoPreview.duration
       ) {
-
         alert(
           "Please enter a valid start and end time."
         );
-
         return;
       }
 
       try {
-
         exportMusic.disabled = true;
         exportTrim.disabled = true;
         previewTrim.disabled = true;
@@ -722,25 +706,21 @@ if (exportMusic) {
 
 
         // --------------------------------
-        // Audio Context
+        // Shared Audio Context
         // --------------------------------
-        const {
-  audioContext,
-  videoSource
-} = getVideoAudioSource();
 
-const source = videoSource;
-        ();
+        const {
+          audioContext,
+          videoSource
+        } = getVideoAudioSource();
+
+        const destination =
+          audioContext.createMediaStreamDestination();
 
 
         // --------------------------------
         // Original Video Audio
         // --------------------------------
-
-        const videoSource =
-          audioContext.createMediaElementSource(
-            videoPreview
-          ); 
 
         const videoGain =
           audioContext.createGain();
@@ -769,9 +749,6 @@ const source = videoSource;
         musicAudio.preload =
           "auto";
 
-        musicAudio.crossOrigin =
-          "anonymous";
-
         const musicSource =
           audioContext.createMediaElementSource(
             musicAudio
@@ -781,7 +758,11 @@ const source = videoSource;
           audioContext.createGain();
 
         musicGain.gain.value =
-          Number(musicVolume.value);
+          Number(
+            musicVolume
+              ? musicVolume.value
+              : 0.5
+          );
 
         musicSource.connect(
           musicGain
@@ -834,22 +815,17 @@ const source = videoSource;
         ];
 
         for (const format of formats) {
-
           if (
             MediaRecorder.isTypeSupported(
               format
             )
           ) {
-
-            mimeType =
-              format;
-
+            mimeType = format;
             break;
           }
         }
 
         if (!mimeType) {
-
           throw new Error(
             "WebM recording is not supported."
           );
@@ -859,7 +835,7 @@ const source = videoSource;
           new MediaRecorder(
             combinedStream,
             {
-              mimeType: mimeType
+              mimeType
             }
           );
 
@@ -867,12 +843,10 @@ const source = videoSource;
 
         recorder.ondataavailable =
           event => {
-
             if (
               event.data &&
               event.data.size > 0
             ) {
-
               chunks.push(
                 event.data
               );
@@ -881,7 +855,6 @@ const source = videoSource;
 
         const finished =
           new Promise(resolve => {
-
             recorder.onstop =
               resolve;
           });
@@ -894,9 +867,7 @@ const source = videoSource;
         videoPreview.pause();
 
         await new Promise(resolve => {
-
           const ready = () => {
-
             videoPreview.removeEventListener(
               "seeked",
               ready
@@ -967,8 +938,9 @@ const source = videoSource;
         let drawing = true;
 
         const drawFrame = () => {
-
-          if (!drawing) return;
+          if (!drawing) {
+            return;
+          }
 
           ctx.drawImage(
             videoPreview,
@@ -987,16 +959,14 @@ const source = videoSource;
 
 
         // --------------------------------
-        // Stop
+        // Stop Export
         // --------------------------------
 
         const stopExport = () => {
 
           if (
-            videoPreview.currentTime >=
-            end
+            videoPreview.currentTime >= end
           ) {
-
             drawing = false;
 
             videoPreview.pause();
@@ -1008,10 +978,8 @@ const source = videoSource;
             );
 
             if (
-              recorder.state !==
-              "inactive"
+              recorder.state !== "inactive"
             ) {
-
               recorder.stop();
             }
           }
@@ -1047,7 +1015,6 @@ const source = videoSource;
               recorder.state !==
               "inactive"
             ) {
-
               recorder.stop();
             }
 
@@ -1056,9 +1023,7 @@ const source = videoSource;
 
         await finished;
 
-        clearTimeout(
-          timeoutId
-        );
+        clearTimeout(timeoutId);
 
 
         // --------------------------------
@@ -1081,9 +1046,7 @@ const source = videoSource;
           );
 
         musicDownloadURL =
-          URL.createObjectURL(
-            blob
-          );
+          URL.createObjectURL(blob);
 
 
         if (downloadMusic) {
@@ -1105,7 +1068,6 @@ const source = videoSource;
           "✅ Video with music ready!";
 
         if (musicStatus) {
-
           musicStatus.textContent =
             "Music export completed ✅";
         }
@@ -1131,8 +1093,6 @@ const source = videoSource;
             track.stop();
           });
 
-        await audioContext.close();
-
       } catch (error) {
 
         console.error(
@@ -1147,7 +1107,6 @@ const source = videoSource;
           error.message;
 
         if (musicStatus) {
-
           musicStatus.textContent =
             "Music export failed.";
         }
@@ -1161,3 +1120,4 @@ const source = videoSource;
     }
   );
 }
+```
