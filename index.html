@@ -14,17 +14,20 @@
   <h1>My Video Studio</h1>
 
   <input
-    type="file"
-    id="videoInput"
-    accept="video/*"
-    style="display:none;"
-  >
+  type="file"
+  id="videoInput"
+  accept="video/*"
+  style="display:none;"
+  onchange="videoSelected(event)"
+>
 
-  <button
-    id="addVideo"
-    type="button"
-  >
-    Select Video
+<button
+  id="addVideo"
+  type="button"
+  onclick="document.getElementById('videoInput').click()"
+>
+  Select Video
+</button>
   </button>
 
   <video
