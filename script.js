@@ -148,12 +148,17 @@ async function loadFFmpeg() {
 
     // IMPORTANT:
     // Local FFmpeg package
-    const module = await import(
-      "/ffmpeg/index.js"
-    );
+    const module = await import("/ffmpeg/index.js");
 
-    const FFmpeg = module.FFmpeg;
+const FFmpeg =
+  module.FFmpeg ||
+  module.default?.FFmpeg ||
+  module.default;
 
+if (typeof FFmpeg !== "function") {
+  throw new Error("FFmpeg class was not found in /ffmpeg/index.js");
+}
+     
     ffmpeg = new FFmpeg();
 
     ffmpeg.on("log", ({ message }) => {
