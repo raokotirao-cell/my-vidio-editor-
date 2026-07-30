@@ -196,13 +196,14 @@ async function loadFFmpeg() {
     exportStatus.textContent =
       "✅ Video engine ready.";
 
-  } catch (error) {
+    } catch (error) {
 
     console.error("FFmpeg loading error:", error);
 
     exportStatus.textContent =
-      "❌ ERROR: " + (error.message || error);
+      "❌ LOAD ERROR: " + (error.message || error);
 
+    throw error;
   }
 }
 
