@@ -13,6 +13,10 @@
 
   <h1>My Video Studio</h1>
 
+  <!-- =========================
+       VIDEO SELECT
+  ========================== -->
+
   <input
     type="file"
     id="videoInput"
@@ -27,40 +31,66 @@
     Select Video
   </button>
 
+
+  <!-- =========================
+       VIDEO PREVIEW
+  ========================== -->
+
   <video
     id="videoPreview"
     controls
-    style="display:none; width:90%; max-width:500px; margin:20px auto;"
+    playsinline
+    style="
+      display:none;
+      width:90%;
+      max-width:500px;
+      margin:20px auto;
+    "
   ></video>
+
+
+  <!-- =========================
+       TRIM CONTROLS
+  ========================== -->
 
   <div
     id="trimControls"
     style="display:none;"
   >
 
-    <label for="startTime">
-      Start Time (seconds)
-    </label>
+    <div>
+      <label for="startTime">
+        Start Time (seconds)
+      </label>
 
-    <input
-      type="number"
-      id="startTime"
-      value="0"
-      min="0"
-      step="0.1"
-    >
+      <input
+        type="number"
+        id="startTime"
+        value="0"
+        min="0"
+        step="0.1"
+      >
+    </div>
 
-    <label for="endTime">
-      End Time (seconds)
-    </label>
 
-    <input
-      type="number"
-      id="endTime"
-      value="0"
-      min="0"
-      step="0.1"
-    >
+    <div>
+      <label for="endTime">
+        End Time (seconds)
+      </label>
+
+      <input
+        type="number"
+        id="endTime"
+        value="0"
+        min="0"
+        step="0.1"
+      >
+    </div>
+
+
+    <!-- =========================
+         PREVIEW BUTTON
+    ========================== -->
 
     <button
       id="previewTrim"
@@ -69,6 +99,11 @@
       Preview Trim
     </button>
 
+
+    <!-- =========================
+         EXPORT BUTTON
+    ========================== -->
+
     <button
       id="exportTrim"
       type="button"
@@ -76,7 +111,17 @@
       Export Trimmed Video
     </button>
 
+
+    <!-- =========================
+         STATUS
+    ========================== -->
+
     <p id="exportStatus"></p>
+
+
+    <!-- =========================
+         DOWNLOAD
+    ========================== -->
 
     <a
       id="downloadVideo"
@@ -88,6 +133,11 @@
     </a>
 
   </div>
+
+
+  <!-- =========================
+       JAVASCRIPT
+  ========================== -->
 
   <script src="script.js"></script>
 
