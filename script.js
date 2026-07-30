@@ -1,4 +1,3 @@
- ```javascript
 const videoInput = document.getElementById("videoInput");
 const videoPreview = document.getElementById("videoPreview");
 const addVideo = document.getElementById("addVideo");
@@ -12,88 +11,19 @@ const exportTrim = document.getElementById("exportTrim");
 const exportStatus = document.getElementById("exportStatus");
 const downloadVideo = document.getElementById("downloadVideo");
 
-
-// ============================================
-// MUSIC ELEMENTS
-// ============================================
-
-const musicControls = document.getElementById("musicControls");
-const audioInput = document.getElementById("audioInput");
-const addMusic = document.getElementById("addMusic");
-const musicStatus = document.getElementById("musicStatus");
-const musicVolume = document.getElementById("musicVolume");
-const musicVolumeValue = document.getElementById("musicVolumeValue");
-const exportMusic = document.getElementById("exportMusic");
-const downloadMusic = document.getElementById("downloadMusic");
-
-
-// ============================================
-// VARIABLES
-// ============================================
-
 let videoURL = null;
 let downloadURL = null;
 
-let musicURL = null;
-let selectedMusic = null;
-let musicDownloadURL = null;
-
-let sharedAudioContext = null;
-let sharedVideoSource = null;
-
-
-// ============================================
-// SHARED VIDEO AUDIO SOURCE
-// ============================================
-
-function getVideoAudioSource() {
-  if (!sharedAudioContext) {
-    const AudioContext =
-      window.AudioContext ||
-      window.webkitAudioContext;
-
-    if (!AudioContext) {
-      throw new Error(
-        "Web Audio API is not supported in this browser."
-      );
-    }
-
-    sharedAudioContext = new AudioContext();
-  }
-
-  if (!sharedVideoSource) {
-    sharedVideoSource =
-      sharedAudioContext.createMediaElementSource(
-        videoPreview
-      );
-  }
-
-  return {
-    audioContext: sharedAudioContext,
-    videoSource: sharedVideoSource
-  };
-}
-
-
-// ============================================
-// SELECT VIDEO
-// ============================================
-
+// Select Video
 addVideo.addEventListener("click", () => {
   videoInput.click();
 });
 
-
-// ============================================
-// LOAD VIDEO
-// ============================================
-
+// Load video
 videoInput.addEventListener("change", () => {
   const file = videoInput.files[0];
 
-  if (!file) {
-    return;
-  }
+  if (!file) return;
 
   if (videoURL) {
     URL.revokeObjectURL(videoURL);
@@ -104,1020 +34,303 @@ videoInput.addEventListener("change", () => {
     downloadURL = null;
   }
 
-  if (musicDownloadURL) {
-    URL.revokeObjectURL(musicDownloadURL);
-    musicDownloadURL = null;
-  }
-
   downloadVideo.style.display = "none";
   downloadVideo.removeAttribute("href");
-
-  if (downloadMusic) {
-    downloadMusic.style.display = "none";
-    downloadMusic.removeAttribute("href");
-  }
-
   exportStatus.textContent = "";
 
   videoURL = URL.createObjectURL(file);
 
   videoPreview.src = videoURL;
   videoPreview.style.display = "block";
-  videoPreview.controls = true;
-
   trimControls.style.display = "block";
-
-  if (musicControls) {
-    musicControls.style.display = "block";
-  }
-
-  if (musicStatus) {
-    musicStatus.textContent = "No music selected.";
-  }
-
-  if (selectedMusic) {
-    selectedMusic = null;
-  }
 });
 
+// Metadata loaded
+videoPreview.addEventListener("loadedmetadata", () => {
+  const duration = videoPreview.duration;
 
-// ============================================
-// VIDEO METADATA
-// ============================================
+  startTime.value = "0";
+  endTime.value = duration.toFixed(1);
 
-videoPreview.addEventListener(
-  "loadedmetadata",
-  () => {
-    const duration = videoPreview.duration;
+  startTime.max = duration;
+  endTime.max = duration;
+});
 
-    startTime.value = "0";
-    endTime.value = duration.toFixed(1);
+// Preview trim
+previewTrim.addEventListener("click", async () => {
+  const start = Number(startTime.value);
+  const end = Number(endTime.value);
 
-    startTime.max = duration;
-    endTime.max = duration;
+  if (
+    start < 0 ||
+    end <= start ||
+    end > videoPreview.duration
+  ) {
+    alert("Please enter a valid start and end time.");
+    return;
   }
-);
 
+  videoPreview.pause();
+  videoPreview.currentTime = start;
 
-// ============================================
-// PREVIEW TRIM
-// ============================================
+  await videoPreview.play();
 
-previewTrim.addEventListener(
-  "click",
-  async () => {
-    const start = Number(startTime.value);
-    const end = Number(endTime.value);
+  const stopPreview = () => {
+    if (videoPreview.currentTime >= end) {
+      videoPreview.pause();
 
-    if (
-      !Number.isFinite(start) ||
-      !Number.isFinite(end) ||
-      start < 0 ||
-      end <= start ||
-      end > videoPreview.duration
-    ) {
-      alert(
-        "Please enter a valid start and end time."
+      videoPreview.removeEventListener(
+        "timeupdate",
+        stopPreview
       );
-      return;
     }
+  };
+
+  videoPreview.addEventListener(
+    "timeupdate",
+    stopPreview
+  );
+});
+
+// EXPORT
+exportTrim.addEventListener("click", async () => {
+  const start = Number(startTime.value);
+  const end = Number(endTime.value);
+
+  if (!videoPreview.src) {
+    alert("Please select a video first.");
+    return;
+  }
+
+  if (
+    start < 0 ||
+    end <= start ||
+    end > videoPreview.duration
+  ) {
+    alert("Please enter a valid start and end time.");
+    return;
+  }
+
+  try {
+    exportTrim.disabled = true;
+    previewTrim.disabled = true;
+
+    downloadVideo.style.display = "none";
+    exportStatus.textContent = "Preparing export...";
+
+    const canvas = document.createElement("canvas");
+
+    canvas.width = videoPreview.videoWidth;
+    canvas.height = videoPreview.videoHeight;
+
+    const ctx = canvas.getContext("2d");
+
+    const AudioContext =
+      window.AudioContext ||
+      window.webkitAudioContext;
+
+    const audioContext = new AudioContext();
+
+    const source =
+      audioContext.createMediaElementSource(
+        videoPreview
+      );
+
+    const destination =
+      audioContext.createMediaStreamDestination();
+
+    source.connect(destination);
+
+    const videoStream =
+      canvas.captureStream(30);
+
+    const combinedStream =
+      new MediaStream();
+
+    videoStream.getVideoTracks().forEach(track => {
+      combinedStream.addTrack(track);
+    });
+
+    destination.stream.getAudioTracks().forEach(track => {
+      combinedStream.addTrack(track);
+    });
+
+    let mimeType = "";
+
+    const formats = [
+      "video/webm;codecs=vp9,opus",
+      "video/webm;codecs=vp8,opus",
+      "video/webm"
+    ];
+
+    for (const format of formats) {
+      if (MediaRecorder.isTypeSupported(format)) {
+        mimeType = format;
+        break;
+      }
+    }
+
+    if (!mimeType) {
+      throw new Error("WebM recording is not supported.");
+    }
+
+    const recorder = new MediaRecorder(
+      combinedStream,
+      {
+        mimeType: mimeType
+      }
+    );
+
+    const chunks = [];
+
+    recorder.ondataavailable = event => {
+      if (event.data && event.data.size > 0) {
+        chunks.push(event.data);
+      }
+    };
+
+    const finished = new Promise(resolve => {
+      recorder.onstop = resolve;
+    });
 
     videoPreview.pause();
-    videoPreview.currentTime = start;
 
-    try {
-      await videoPreview.play();
-    } catch (error) {
-      console.log("Preview play:", error);
-    }
+    await new Promise(resolve => {
+      const ready = () => {
+        videoPreview.removeEventListener(
+          "seeked",
+          ready
+        );
 
-    const stopPreview = () => {
+        resolve();
+      };
+
+      videoPreview.addEventListener(
+        "seeked",
+        ready
+      );
+
+      videoPreview.currentTime = start;
+    });
+
+    recorder.start(200);
+
+    await audioContext.resume();
+
+    await videoPreview.play();
+
+    exportStatus.textContent =
+      "Exporting video + audio...";
+
+    let drawing = true;
+
+    const drawFrame = () => {
+      if (!drawing) return;
+
+      ctx.drawImage(
+        videoPreview,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      );
+
+      requestAnimationFrame(drawFrame);
+    };
+
+    drawFrame();
+
+    const stopExport = () => {
       if (videoPreview.currentTime >= end) {
+        drawing = false;
+
         videoPreview.pause();
 
         videoPreview.removeEventListener(
           "timeupdate",
-          stopPreview
+          stopExport
         );
+
+        if (recorder.state !== "inactive") {
+          recorder.stop();
+        }
       }
     };
 
     videoPreview.addEventListener(
       "timeupdate",
-      stopPreview
+      stopExport
     );
-  }
-);
 
+    const durationMs =
+      ((end - start) + 2) * 1000;
 
-// ============================================
-// EXPORT TRIM
-// ============================================
-
-exportTrim.addEventListener(
-  "click",
-  async () => {
-    const start = Number(startTime.value);
-    const end = Number(endTime.value);
-
-    if (!videoPreview.src) {
-      alert("Please select a video first.");
-      return;
-    }
-
-    if (
-      !Number.isFinite(start) ||
-      !Number.isFinite(end) ||
-      start < 0 ||
-      end <= start ||
-      end > videoPreview.duration
-    ) {
-      alert(
-        "Please enter a valid start and end time."
-      );
-      return;
-    }
-
-    try {
-      exportTrim.disabled = true;
-      previewTrim.disabled = true;
-
-      downloadVideo.style.display = "none";
-
-      exportStatus.textContent =
-        "Preparing export...";
-
-
-      // --------------------------------
-      // Canvas
-      // --------------------------------
-
-      const canvas =
-        document.createElement("canvas");
-
-      canvas.width =
-        videoPreview.videoWidth;
-
-      canvas.height =
-        videoPreview.videoHeight;
-
-      const ctx =
-        canvas.getContext("2d");
-
-
-      // --------------------------------
-      // Shared Audio Context
-      // --------------------------------
-
-      const {
-        audioContext,
-        videoSource
-      } = getVideoAudioSource();
-
-      const destination =
-        audioContext.createMediaStreamDestination();
-
-      videoSource.connect(destination);
-
-
-      // --------------------------------
-      // Video Stream
-      // --------------------------------
-
-      const videoStream =
-        canvas.captureStream(30);
-
-
-      // --------------------------------
-      // Combined Stream
-      // --------------------------------
-
-      const combinedStream =
-        new MediaStream();
-
-      videoStream
-        .getVideoTracks()
-        .forEach(track => {
-          combinedStream.addTrack(track);
-        });
-
-      destination
-        .stream
-        .getAudioTracks()
-        .forEach(track => {
-          combinedStream.addTrack(track);
-        });
-
-
-      // --------------------------------
-      // Recorder
-      // --------------------------------
-
-      let mimeType = "";
-
-      const formats = [
-        "video/webm;codecs=vp9,opus",
-        "video/webm;codecs=vp8,opus",
-        "video/webm"
-      ];
-
-      for (const format of formats) {
-        if (
-          MediaRecorder.isTypeSupported(format)
-        ) {
-          mimeType = format;
-          break;
-        }
-      }
-
-      if (!mimeType) {
-        throw new Error(
-          "WebM recording is not supported."
-        );
-      }
-
-      const recorder =
-        new MediaRecorder(
-          combinedStream,
-          {
-            mimeType
-          }
-        );
-
-      const chunks = [];
-
-      recorder.ondataavailable =
-        event => {
-          if (
-            event.data &&
-            event.data.size > 0
-          ) {
-            chunks.push(event.data);
-          }
-        };
-
-      const finished =
-        new Promise(resolve => {
-          recorder.onstop = resolve;
-        });
-
-
-      // --------------------------------
-      // Seek
-      // --------------------------------
+    setTimeout(() => {
+      drawing = false;
 
       videoPreview.pause();
 
-      await new Promise(resolve => {
-        const ready = () => {
-          videoPreview.removeEventListener(
-            "seeked",
-            ready
-          );
-
-          resolve();
-        };
-
-        videoPreview.addEventListener(
-          "seeked",
-          ready
-        );
-
-        videoPreview.currentTime = start;
-      });
-
-
-      // --------------------------------
-      // Start
-      // --------------------------------
-
-      recorder.start(200);
-
-      await audioContext.resume();
-
-      await videoPreview.play();
-
-      exportStatus.textContent =
-        "Exporting video + audio...";
-
-
-      // --------------------------------
-      // Draw Frames
-      // --------------------------------
-
-      let drawing = true;
-
-      const drawFrame = () => {
-        if (!drawing) {
-          return;
-        }
-
-        ctx.drawImage(
-          videoPreview,
-          0,
-          0,
-          canvas.width,
-          canvas.height
-        );
-
-        requestAnimationFrame(drawFrame);
-      };
-
-      drawFrame();
-
-
-      // --------------------------------
-      // Stop Export
-      // --------------------------------
-
-      const stopExport = () => {
-        if (
-          videoPreview.currentTime >= end
-        ) {
-          drawing = false;
-
-          videoPreview.pause();
-
-          videoPreview.removeEventListener(
-            "timeupdate",
-            stopExport
-          );
-
-          if (
-            recorder.state !== "inactive"
-          ) {
-            recorder.stop();
-          }
-        }
-      };
-
-      videoPreview.addEventListener(
+      videoPreview.removeEventListener(
         "timeupdate",
         stopExport
       );
 
+      if (recorder.state !== "inactive") {
+        recorder.stop();
+      }
+    }, durationMs);
 
-      // --------------------------------
-      // Safety Timeout
-      // --------------------------------
+    await finished;
 
-      const durationMs =
-        ((end - start) + 2) * 1000;
+    const blob = new Blob(
+      chunks,
+      {
+        type: "video/webm"
+      }
+    );
 
-      const timeoutId =
-        setTimeout(() => {
-          drawing = false;
+    downloadURL =
+      URL.createObjectURL(blob);
 
-          videoPreview.pause();
+    downloadVideo.href =
+      downloadURL;
 
-          videoPreview.removeEventListener(
-            "timeupdate",
-            stopExport
-          );
+    downloadVideo.download =
+      "trimmed-video.webm";
 
-          if (
-            recorder.state !== "inactive"
-          ) {
-            recorder.stop();
-          }
-        }, durationMs);
+    downloadVideo.textContent =
+      "Download Trimmed Video";
 
+    downloadVideo.style.display =
+      "inline-block";
 
-      await finished;
+    exportStatus.textContent =
+      "Trimmed video + audio ready ✅";
 
-      clearTimeout(timeoutId);
+    combinedStream.getTracks().forEach(track => {
+      track.stop();
+    });
 
+    videoStream.getTracks().forEach(track => {
+      track.stop();
+    });
 
-      // --------------------------------
-      // Create File
-      // --------------------------------
+    audioContext.close();
 
-      const blob =
-        new Blob(
-          chunks,
-          {
-            type: "video/webm"
-          }
-        );
+  } catch (error) {
 
-      downloadURL =
-        URL.createObjectURL(blob);
+    console.error(
+      "Export error:",
+      error
+    );
 
-      downloadVideo.href =
-        downloadURL;
+    exportStatus.textContent =
+      "Export failed: " +
+      error.message;
 
-      downloadVideo.download =
-        "trimmed-video.webm";
+  } finally {
 
-      downloadVideo.textContent =
-        "Download Trimmed Video";
-
-      downloadVideo.style.display =
-        "inline-block";
-
-      exportStatus.textContent =
-        "Trimmed video + audio ready ✅";
-
-
-      // --------------------------------
-      // Cleanup
-      // --------------------------------
-
-      combinedStream
-        .getTracks()
-        .forEach(track => {
-          track.stop();
-        });
-
-      videoStream
-        .getTracks()
-        .forEach(track => {
-          track.stop();
-        });
-
-    } catch (error) {
-      console.error(
-        "Export error:",
-        error
-      );
-
-      exportStatus.textContent =
-        "Export failed: " +
-        error.message;
-
-    } finally {
-      exportTrim.disabled = false;
-      previewTrim.disabled = false;
-    }
+    exportTrim.disabled = false;
+    previewTrim.disabled = false;
   }
-);
-
-
-// ============================================
-// SELECT MUSIC
-// ============================================
-
-if (addMusic) {
-  addMusic.addEventListener(
-    "click",
-    () => {
-      if (audioInput) {
-        audioInput.click();
-      }
-    }
-  );
-}
-
-
-// ============================================
-// MUSIC SELECTED
-// ============================================
-
-if (audioInput) {
-  audioInput.addEventListener(
-    "change",
-    () => {
-      const file = audioInput.files[0];
-
-      if (!file) {
-        return;
-      }
-
-      selectedMusic = file;
-
-      if (musicURL) {
-        URL.revokeObjectURL(musicURL);
-      }
-
-      musicURL =
-        URL.createObjectURL(file);
-
-      if (musicStatus) {
-        musicStatus.textContent =
-          `Music selected: ${file.name}`;
-      }
-
-      if (exportMusic) {
-        exportMusic.disabled = false;
-      }
-    }
-  );
-}
-
-
-// ============================================
-// MUSIC VOLUME
-// ============================================
-
-if (musicVolume) {
-  musicVolume.addEventListener(
-    "input",
-    () => {
-      const value =
-        Math.round(
-          Number(musicVolume.value) * 100
-        );
-
-      if (musicVolumeValue) {
-        musicVolumeValue.textContent =
-          `${value}%`;
-      }
-    }
-  );
-}
-
-
-// ============================================
-// EXPORT VIDEO WITH MUSIC
-// ============================================
-
-if (exportMusic) {
-  exportMusic.addEventListener(
-    "click",
-    async () => {
-
-      if (!videoPreview.src) {
-        alert(
-          "Please select a video first."
-        );
-        return;
-      }
-
-      if (!selectedMusic) {
-        alert(
-          "Please select music first."
-        );
-        return;
-      }
-
-      const start =
-        Number(startTime.value);
-
-      const end =
-        Number(endTime.value);
-
-      if (
-        !Number.isFinite(start) ||
-        !Number.isFinite(end) ||
-        start < 0 ||
-        end <= start ||
-        end > videoPreview.duration
-      ) {
-        alert(
-          "Please enter a valid start and end time."
-        );
-        return;
-      }
-
-      try {
-        exportMusic.disabled = true;
-        exportTrim.disabled = true;
-        previewTrim.disabled = true;
-
-        if (downloadMusic) {
-          downloadMusic.style.display =
-            "none";
-        }
-
-        if (musicStatus) {
-          musicStatus.textContent =
-            "Preparing music export...";
-        }
-
-        exportStatus.textContent =
-          "Preparing video + music...";
-
-
-        // --------------------------------
-        // Canvas
-        // --------------------------------
-
-        const canvas =
-          document.createElement("canvas");
-
-        canvas.width =
-          videoPreview.videoWidth;
-
-        canvas.height =
-          videoPreview.videoHeight;
-
-        const ctx =
-          canvas.getContext("2d");
-
-
-        // --------------------------------
-        // Shared Audio Context
-        // --------------------------------
-
-        const {
-          audioContext,
-          videoSource
-        } = getVideoAudioSource();
-
-        const destination =
-          audioContext.createMediaStreamDestination();
-
-
-        // --------------------------------
-        // Original Video Audio
-        // --------------------------------
-
-        const videoGain =
-          audioContext.createGain();
-
-        videoGain.gain.value = 1;
-
-        videoSource.connect(
-          videoGain
-        );
-
-        videoGain.connect(
-          destination
-        );
-
-
-        // --------------------------------
-        // Music Audio
-        // --------------------------------
-
-        const musicAudio =
-          new Audio();
-
-        musicAudio.src =
-          musicURL;
-
-        musicAudio.preload =
-          "auto";
-
-        const musicSource =
-          audioContext.createMediaElementSource(
-            musicAudio
-          );
-
-        const musicGain =
-          audioContext.createGain();
-
-        musicGain.gain.value =
-          Number(
-            musicVolume
-              ? musicVolume.value
-              : 0.5
-          );
-
-        musicSource.connect(
-          musicGain
-        );
-
-        musicGain.connect(
-          destination
-        );
-
-
-        // --------------------------------
-        // Video Stream
-        // --------------------------------
-
-        const videoStream =
-          canvas.captureStream(30);
-
-
-        // --------------------------------
-        // Combined Stream
-        // --------------------------------
-
-        const combinedStream =
-          new MediaStream();
-
-        videoStream
-          .getVideoTracks()
-          .forEach(track => {
-            combinedStream.addTrack(track);
-          });
-
-        destination
-          .stream
-          .getAudioTracks()
-          .forEach(track => {
-            combinedStream.addTrack(track);
-          });
-
-
-        // --------------------------------
-        // Recorder
-        // --------------------------------
-
-        let mimeType = "";
-
-        const formats = [
-          "video/webm;codecs=vp9,opus",
-          "video/webm;codecs=vp8,opus",
-          "video/webm"
-        ];
-
-        for (const format of formats) {
-          if (
-            MediaRecorder.isTypeSupported(
-              format
-            )
-          ) {
-            mimeType = format;
-            break;
-          }
-        }
-
-        if (!mimeType) {
-          throw new Error(
-            "WebM recording is not supported."
-          );
-        }
-
-        const recorder =
-          new MediaRecorder(
-            combinedStream,
-            {
-              mimeType
-            }
-          );
-
-        const chunks = [];
-
-        recorder.ondataavailable =
-          event => {
-            if (
-              event.data &&
-              event.data.size > 0
-            ) {
-              chunks.push(
-                event.data
-              );
-            }
-          };
-
-        const finished =
-          new Promise(resolve => {
-            recorder.onstop =
-              resolve;
-          });
-
-
-        // --------------------------------
-        // Seek Video
-        // --------------------------------
-
-        videoPreview.pause();
-
-        await new Promise(resolve => {
-          const ready = () => {
-            videoPreview.removeEventListener(
-              "seeked",
-              ready
-            );
-
-            resolve();
-          };
-
-          videoPreview.addEventListener(
-            "seeked",
-            ready
-          );
-
-          videoPreview.currentTime =
-            start;
-        });
-
-
-        // --------------------------------
-        // Prepare Music
-        // --------------------------------
-
-        musicAudio.currentTime = 0;
-
-        await new Promise(resolve => {
-
-          if (
-            musicAudio.readyState >= 2
-          ) {
-            resolve();
-            return;
-          }
-
-          musicAudio.addEventListener(
-            "canplay",
-            resolve,
-            {
-              once: true
-            }
-          );
-
-          musicAudio.load();
-        });
-
-
-        // --------------------------------
-        // Start Recording
-        // --------------------------------
-
-        recorder.start(200);
-
-        await audioContext.resume();
-
-        videoPreview.muted = true;
-
-        await videoPreview.play();
-
-        await musicAudio.play();
-
-        exportStatus.textContent =
-          "Exporting video with music...";
-
-
-        // --------------------------------
-        // Draw Frames
-        // --------------------------------
-
-        let drawing = true;
-
-        const drawFrame = () => {
-          if (!drawing) {
-            return;
-          }
-
-          ctx.drawImage(
-            videoPreview,
-            0,
-            0,
-            canvas.width,
-            canvas.height
-          );
-
-          requestAnimationFrame(
-            drawFrame
-          );
-        };
-
-        drawFrame();
-
-
-        // --------------------------------
-        // Stop Export
-        // --------------------------------
-
-        const stopExport = () => {
-
-          if (
-            videoPreview.currentTime >= end
-          ) {
-            drawing = false;
-
-            videoPreview.pause();
-            musicAudio.pause();
-
-            videoPreview.removeEventListener(
-              "timeupdate",
-              stopExport
-            );
-
-            if (
-              recorder.state !== "inactive"
-            ) {
-              recorder.stop();
-            }
-          }
-        };
-
-        videoPreview.addEventListener(
-          "timeupdate",
-          stopExport
-        );
-
-
-        // --------------------------------
-        // Safety Timeout
-        // --------------------------------
-
-        const durationMs =
-          ((end - start) + 3) * 1000;
-
-        const timeoutId =
-          setTimeout(() => {
-
-            drawing = false;
-
-            videoPreview.pause();
-            musicAudio.pause();
-
-            videoPreview.removeEventListener(
-              "timeupdate",
-              stopExport
-            );
-
-            if (
-              recorder.state !==
-              "inactive"
-            ) {
-              recorder.stop();
-            }
-
-          }, durationMs);
-
-
-        await finished;
-
-        clearTimeout(timeoutId);
-
-
-        // --------------------------------
-        // Restore Video
-        // --------------------------------
-
-        videoPreview.muted = false;
-
-
-        // --------------------------------
-        // Create Output
-        // --------------------------------
-
-        const blob =
-          new Blob(
-            chunks,
-            {
-              type: "video/webm"
-            }
-          );
-
-        musicDownloadURL =
-          URL.createObjectURL(blob);
-
-
-        if (downloadMusic) {
-
-          downloadMusic.href =
-            musicDownloadURL;
-
-          downloadMusic.download =
-            "video-with-music.webm";
-
-          downloadMusic.textContent =
-            "Download Video With Music";
-
-          downloadMusic.style.display =
-            "inline-block";
-        }
-
-        exportStatus.textContent =
-          "✅ Video with music ready!";
-
-        if (musicStatus) {
-          musicStatus.textContent =
-            "Music export completed ✅";
-        }
-
-
-        // --------------------------------
-        // Cleanup
-        // --------------------------------
-
-        musicAudio.pause();
-
-        videoPreview.muted = false;
-
-        combinedStream
-          .getTracks()
-          .forEach(track => {
-            track.stop();
-          });
-
-        videoStream
-          .getTracks()
-          .forEach(track => {
-            track.stop();
-          });
-
-      } catch (error) {
-
-        console.error(
-          "Music export error:",
-          error
-        );
-
-        videoPreview.muted = false;
-
-        exportStatus.textContent =
-          "❌ Music export failed: " +
-          error.message;
-
-        if (musicStatus) {
-          musicStatus.textContent =
-            "Music export failed.";
-        }
-
-      } finally {
-
-        exportMusic.disabled = false;
-        exportTrim.disabled = false;
-        previewTrim.disabled = false;
-      }
-    }
-  );
-}
-```
+});
