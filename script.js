@@ -34,6 +34,28 @@ let videoURL = null;
 let downloadURL = null;
 let sharedAudioContext = null;
 let sharedVideoSource = null;
+function getVideoAudioSource() {
+  if (!sharedAudioContext) {
+    const AudioContext =
+      window.AudioContext ||
+      window.webkitAudioContext;
+
+    sharedAudioContext =
+      new AudioContext();
+  }
+
+  if (!sharedVideoSource) {
+    sharedVideoSource =
+      sharedAudioContext.createMediaElementSource(
+        videoPreview
+      );
+  }
+
+  return {
+    audioContext: sharedAudioContext,
+    videoSource: sharedVideoSource
+  };
+}
 let musicURL = null;
 let selectedMusic = null;
 let musicDownloadURL = null;
