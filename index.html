@@ -13,10 +13,6 @@
 
   <h1>My Video Studio</h1>
 
-  <!-- =========================
-       VIDEO SELECT
-  ========================== -->
-
   <input
     type="file"
     id="videoInput"
@@ -24,120 +20,37 @@
     style="display:none;"
   >
 
-  <button
-    id="addVideo"
-    type="button"
-  >
-    Select Video
-  </button>
-
-
-  <!-- =========================
-       VIDEO PREVIEW
-  ========================== -->
+  <button id="addVideo">Select Video</button>
 
   <video
     id="videoPreview"
     controls
-    playsinline
-    style="
-      display:none;
-      width:90%;
-      max-width:500px;
-      margin:20px auto;
-    "
+    style="display:none; width:90%; max-width:500px; margin:20px auto;"
   ></video>
 
+  <div id="trimControls" style="display:none;">
 
-  <!-- =========================
-       TRIM CONTROLS
-  ========================== -->
-
-  <div
-    id="trimControls"
-    style="display:none;"
-  >
-
-    <div>
-      <label for="startTime">
-        Start Time (seconds)
-      </label>
-
-      <input
-        type="number"
-        id="startTime"
-        value="0"
-        min="0"
-        step="0.1"
-      >
-    </div>
-
-
-    <div>
-      <label for="endTime">
-        End Time (seconds)
-      </label>
-
-      <input
-        type="number"
-        id="endTime"
-        value="0"
-        min="0"
-        step="0.1"
-      >
-    </div>
-
-
-    <!-- =========================
-         PREVIEW BUTTON
-    ========================== -->
-
-    <button
-      id="previewTrim"
-      type="button"
+    <label>Start Time (seconds)</label>
+    <input
+      type="number"
+      id="startTime"
+      value="0"
+      min="0"
+      step="0.1"
     >
-      Preview Trim
-    </button>
 
-
-    <!-- =========================
-         EXPORT BUTTON
-    ========================== -->
-
-    <button
-      id="exportTrim"
-      type="button"
+    <label>End Time (seconds)</label>
+    <input
+      type="number"
+      id="endTime"
+      value="0"
+      min="0"
+      step="0.1"
     >
-      Export Trimmed Video
-    </button>
 
-
-    <!-- =========================
-         STATUS
-    ========================== -->
-
-    <p id="exportStatus"></p>
-
-
-    <!-- =========================
-         DOWNLOAD
-    ========================== -->
-
-    <a
-      id="downloadVideo"
-      href="#"
-      style="display:none;"
-      download="trimmed-video.mp4"
-    >
-      Download Video
-    </a>
+    <button id="previewTrim">Preview Trim</button>
 
   </div>
-
-
-  <!-- =========================
-       JAVASCRIPT
-  ========================== -->
 
   <script src="script.js"></script>
 
