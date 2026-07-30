@@ -141,6 +141,7 @@ previewTrim.addEventListener("click", () => {
 // ===============================
 // LOAD FFMPEG
 // ===============================
+
 async function loadFFmpeg() {
 
   if (ffmpegReady) {
@@ -152,12 +153,10 @@ async function loadFFmpeg() {
 
   try {
 
-    // Load FFmpeg package
     const ffmpegModule = await import(
       "https://esm.sh/@ffmpeg/ffmpeg@0.12.10"
     );
 
-    // Load FFmpeg utility functions
     const utilModule = await import(
       "https://esm.sh/@ffmpeg/util@0.12.2"
     );
@@ -174,44 +173,36 @@ async function loadFFmpeg() {
     });
 
     ffmpeg.on("progress", ({ progress }) => {
-
-      const percent =
-        Math.round(progress * 100);
-
       exportStatus.textContent =
-        `Exporting video... ${percent}%`;
+        `Exporting video... ${Math.round(progress * 100)}%`;
     });
 
-    // Official FFmpeg core CDN
-    
-const baseURL = "/ffmpeg";
+    const baseURL = "/ffmpeg";
 
-await ffmpeg.load({
-  coreURL: await toBlobURL(
-    `${baseURL}/ffmpeg-core.js`,
-    "text/javascript"
-  ),
+    await ffmpeg.load({
+      coreURL: await toBlobURL(
+        `${baseURL}/ffmpeg-core.js`,
+        "text/javascript"
+      ),
 
-  wasmURL: await toBlobURL(
-    `${baseURL}/ffmpeg-core.wasm`,
-    "application/wasm"
-  ),
+      wasmURL: await toBlobURL(
+        `${baseURL}/ffmpeg-core.wasm`,
+        "application/wasm"
+      )
+    });
 
-  classWorkerURL:
-    `${window.location.origin}/ffmpeg/worker.js`
-});
     ffmpegReady = true;
 
-    console.log("FFmpeg loaded successfully.");
+    exportStatus.textContent =
+      "✅ Video engine ready.";
 
   } catch (error) {
 
     console.error("FFmpeg loading error:", error);
 
     exportStatus.textContent =
-      "❌ Video engine failed to load.";
+      "❌ ERROR: " + (error.message || error);
 
-    throw error;
   }
 }
 
