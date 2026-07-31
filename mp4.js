@@ -46,8 +46,7 @@ async function loadFFmpeg() {
 
   await ffmpeg.load({
   classWorkerURL:
-    "/ffmpeg/worker.js",
-
+  window.location.origin + "/ffmpeg/worker.js",
   coreURL:
     await toBlobURL(
       `${baseURL}/ffmpeg-core.js`,
