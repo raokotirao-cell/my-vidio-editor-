@@ -2495,6 +2495,7 @@ if (chunks.length === 0) {
   );
 
 })();
+
 // ============================================
 // RECORD OWN VOICE - ISOLATED CODE
 // ============================================
@@ -2530,14 +2531,14 @@ if (chunks.length === 0) {
 
 
   let mediaRecorder = null;
+  let microphoneStream = null;
   let recordedVoiceChunks = [];
   let recordedVoiceBlob = null;
   let recordedVoiceURL = null;
-  let microphoneStream = null;
 
 
   // --------------------------------
-  // FIND AUDIO MIME TYPE
+  // AUDIO MIME TYPE
   // --------------------------------
 
   const getAudioMimeType = () => {
@@ -2547,7 +2548,6 @@ if (chunks.length === 0) {
       "audio/webm",
       "audio/ogg;codecs=opus"
     ];
-
 
     for (const format of formats) {
 
@@ -2559,13 +2559,12 @@ if (chunks.length === 0) {
 
     }
 
-
     return "";
   };
 
 
   // --------------------------------
-  // START VOICE RECORDING
+  // START RECORDING
   // --------------------------------
 
   startVoiceRecording.addEventListener(
@@ -2585,6 +2584,18 @@ if (chunks.length === 0) {
           );
 
           recordedVoiceURL = null;
+
+        }
+
+
+        if (
+          !navigator.mediaDevices ||
+          !navigator.mediaDevices.getUserMedia
+        ) {
+
+          throw new Error(
+            "Microphone is not supported by this browser."
+          );
 
         }
 
@@ -2651,18 +2662,26 @@ if (chunks.length === 0) {
             );
 
 
+          if (
+            recordedVoiceBlob.size === 0
+          ) {
+
+            voiceRecordingStatus.textContent =
+              "❌ Voice recording is empty.";
+
+            return;
+
+          }
+
+
           recordedVoiceURL =
             URL.createObjectURL(
               recordedVoiceBlob
             );
 
 
-          if (voiceRecordingStatus) {
-
-            voiceRecordingStatus.textContent =
-              "Voice recorded ✅";
-
-          }
+          voiceRecordingStatus.textContent =
+            "Voice recorded ✅";
 
 
           if (microphoneStream) {
@@ -2719,7 +2738,18 @@ if (chunks.length === 0) {
               track.stop();
             });
 
+          microphoneStream = null;
+
         }
+
+        startVoiceRecording.disabled =
+          false;
+
+        stopVoiceRecording.disabled =
+          true;
+
+        exportVoiceVideo.disabled =
+          true;
 
       }
 
@@ -2728,7 +2758,7 @@ if (chunks.length === 0) {
 
 
   // --------------------------------
-  // STOP VOICE RECORDING
+  // STOP RECORDING
   // --------------------------------
 
   stopVoiceRecording.addEventListener(
@@ -2737,7 +2767,7 @@ if (chunks.length === 0) {
 
       if (
         mediaRecorder &&
-        mediaRecorder.state !== "inactive"
+        mediaRecorder.state === "recording"
       ) {
 
         mediaRecorder.stop();
@@ -2751,18 +2781,15 @@ if (chunks.length === 0) {
       startVoiceRecording.disabled =
         false;
 
-      exportVoiceVideo.disabled =
-        false;
-
       voiceRecordingStatus.textContent =
-        "Processing voice recording...";
+        "Processing voice...";
 
     }
   );
 
 
   // --------------------------------
-  // EXPORT VIDEO WITH OWN VOICE
+  // ADD OWN VOICE TO VIDEO
   // --------------------------------
 
   exportVoiceVideo.addEventListener(
@@ -2780,7 +2807,10 @@ if (chunks.length === 0) {
       }
 
 
-      if (!recordedVoiceBlob) {
+      if (
+        !recordedVoiceBlob ||
+        !recordedVoiceURL
+      ) {
 
         alert(
           "Please record your voice first."
@@ -2799,11 +2829,12 @@ if (chunks.length === 0) {
       let audioContext = null;
       let destination = null;
 
-      let combinedStream = null;
       let videoStream = null;
+      let combinedStream = null;
       let recorder = null;
 
       let animationFrame = null;
+      let stopTimer = null;
 
 
       try {
@@ -2823,19 +2854,23 @@ if (chunks.length === 0) {
           downloadVoiceVideo.style.display =
             "none";
 
+          downloadVoiceVideo.removeAttribute(
+            "href"
+          );
+
         }
 
 
         if (voiceExportStatus) {
 
           voiceExportStatus.textContent =
-            "Preparing video and voice...";
+            "Preparing video with your voice...";
 
         }
 
 
         // --------------------------------
-        // VIDEO
+        // LOAD VIDEO
         // --------------------------------
 
         video =
@@ -2871,8 +2906,20 @@ if (chunks.length === 0) {
         );
 
 
+        if (
+          !video.videoWidth ||
+          !video.videoHeight
+        ) {
+
+          throw new Error(
+            "Video dimensions are not available."
+          );
+
+        }
+
+
         // --------------------------------
-        // VOICE AUDIO
+        // LOAD VOICE
         // --------------------------------
 
         voiceAudio =
@@ -2913,10 +2960,10 @@ if (chunks.length === 0) {
           document.createElement("canvas");
 
         canvas.width =
-          video.videoWidth || 1280;
+          video.videoWidth;
 
         canvas.height =
-          video.videoHeight || 720;
+          video.videoHeight;
 
 
         ctx =
@@ -2934,6 +2981,8 @@ if (chunks.length === 0) {
 
         // --------------------------------
         // AUDIO CONTEXT
+        // IMPORTANT:
+        // ORIGINAL VIDEO AUDIO IS NOT CONNECTED
         // --------------------------------
 
         const AudioContext =
@@ -2959,52 +3008,35 @@ if (chunks.length === 0) {
 
 
         // --------------------------------
-        // ORIGINAL VIDEO AUDIO
+        // OWN VOICE ONLY
         // --------------------------------
 
-        const videoSource =
+        const voiceSource =
           audioContext.createMediaElementSource(
-            video
+            voiceAudio
           );
 
 
-        const videoGain =
+        const voiceGain =
           audioContext.createGain();
 
 
-        videoGain.gain.value =
+        voiceGain.gain.value =
           1;
 
 
-        videoSource.connect(
-          videoGain
+        voiceSource.connect(
+          voiceGain
         );
 
-        videoGain.connect(
+
+        voiceGain.connect(
           destination
         );
 
 
         // --------------------------------
-        // OWN VOICE AUDIO
-        // --------------------------------
-const videoSource =
-  audioContext.createMediaElementSource(
-    video
-  );
-
-const videoGain =
-  audioContext.createGain();
-
-videoGain.gain.value = 0;
-
-videoSource.connect(videoGain);
-videoGain.connect(destination);
-
-    })();
-
-        // --------------------------------
-        // STREAM
+        // VIDEO STREAM
         // --------------------------------
 
         videoStream =
@@ -3087,8 +3119,7 @@ videoGain.connect(destination);
           new MediaRecorder(
             combinedStream,
             {
-              mimeType:
-                mimeType
+              mimeType: mimeType
             }
           );
 
@@ -3123,46 +3154,14 @@ videoGain.connect(destination);
 
 
         // --------------------------------
-        // SEEK TO START
-        // --------------------------------
-
-        await new Promise(
-          resolve => {
-
-            const seeked = () => {
-
-              video.removeEventListener(
-                "seeked",
-                seeked
-              );
-
-              resolve();
-
-            };
-
-
-            video.addEventListener(
-              "seeked",
-              seeked
-            );
-
-
-            video.currentTime =
-              0;
-
-          }
-        );
-
-
-        voiceAudio.currentTime =
-          0;
-
-
-        // --------------------------------
         // START
         // --------------------------------
 
         await audioContext.resume();
+
+
+        video.currentTime = 0;
+        voiceAudio.currentTime = 0;
 
 
         recorder.start(200);
@@ -3175,11 +3174,11 @@ videoGain.connect(destination);
 
           await voiceAudio.play();
 
-        } catch (voicePlayError) {
+        } catch (voiceError) {
 
           console.warn(
             "Voice playback warning:",
-            voicePlayError
+            voiceError
           );
 
         }
@@ -3188,13 +3187,13 @@ videoGain.connect(destination);
         if (voiceExportStatus) {
 
           voiceExportStatus.textContent =
-            "Exporting video with your voice...";
+            "Exporting video with your own voice...";
 
         }
 
 
         // --------------------------------
-        // DRAW FRAMES
+        // DRAW VIDEO
         // --------------------------------
 
         let drawing = true;
@@ -3233,164 +3232,144 @@ videoGain.connect(destination);
         drawFrame();
 
 
-        // 
+        // --------------------------------
+        // STOP FUNCTION
+        // --------------------------------
 
-// --------------------------------
-// STOP AT VIDEO END
-// --------------------------------
-
-let exportFinished = false;
-let safetyTimer = null;
-
-const finishExport = async () => {
-
-  if (exportFinished) {
-    return;
-  }
-
-  exportFinished = true;
-
-  drawing = false;
-
-  video.pause();
-  voiceAudio.pause();
-
-  video.removeEventListener(
-    "timeupdate",
-    stopExport
-  );
-
-  if (animationFrame) {
-    cancelAnimationFrame(
-      animationFrame
-    );
-  }
-
-  // Give MediaRecorder time
-  // to collect the last frames.
-  try {
-
-    if (
-      recorder &&
-      recorder.state === "recording"
-    ) {
-
-      recorder.requestData();
-
-      await new Promise(resolve =>
-        setTimeout(resolve, 300)
-      );
-
-      if (
-        recorder.state !== "inactive"
-      ) {
-
-        recorder.stop();
-
-      }
-
-    }
-
-  } catch (e) {
-
-    console.log(
-      "Recorder stop warning:",
-      e
-    );
-
-  }
-
-};
+        let stopped = false;
 
 
-const stopExport = () => {
+        const finishExport = () => {
 
-  if (
-    video.ended ||
-    video.currentTime >=
-      video.duration - 0.15
-  ) {
-
-    finishExport();
-
-  }
-
-};
+          if (stopped) {
+            return;
+          }
 
 
-video.addEventListener(
-  "timeupdate",
-  stopExport
-);
+          stopped = true;
+          drawing = false;
 
 
-// Safety timeout
+          if (animationFrame) {
 
-safetyTimer =
-  setTimeout(
-    () => {
+            cancelAnimationFrame(
+              animationFrame
+            );
 
-      finishExport();
+            animationFrame =
+              null;
 
-    },
-    Math.max(
-      3000,
-      (video.duration * 1000) + 2000
-    )
-  );
+          }
 
 
-await finished;
+          video.pause();
+          voiceAudio.pause();
 
 
-if (safetyTimer) {
+          if (
+            recorder &&
+            recorder.state === "recording"
+          ) {
 
-  clearTimeout(
-    safetyTimer
-  );
+            recorder.requestData();
 
-}
+            setTimeout(
+              () => {
 
+                if (
+                  recorder &&
+                  recorder.state !==
+                    "inactive"
+                ) {
 
-// --------------------------------
-// CHECK RECORDED DATA
-// --------------------------------
+                  recorder.stop();
 
-if (chunks.length === 0) {
+                }
 
-  throw new Error(
-    "Recorder produced no voice video data."
-  );
+              },
+              300
+            );
 
-}
+          }
 
-       
-
-
-
-
-
-
-
-
-            
+        };
 
 
-        clearTimeout(
-          safetyTimer
+        // --------------------------------
+        // VIDEO END
+        // --------------------------------
+
+        video.addEventListener(
+          "ended",
+          finishExport
         );
+
+
+        video.addEventListener(
+          "timeupdate",
+          () => {
+
+            if (
+              video.duration &&
+              video.currentTime >=
+                video.duration - 0.15
+            ) {
+
+              finishExport();
+
+            }
+
+          }
+        );
+
+
+        // --------------------------------
+        // SAFETY TIMER
+        // --------------------------------
+
+        stopTimer =
+          setTimeout(
+            finishExport,
+            Math.max(
+              3000,
+              (video.duration * 1000) + 2000
+            )
+          );
+
+
+        await finished;
+
+
+        if (stopTimer) {
+
+          clearTimeout(
+            stopTimer
+          );
+
+          stopTimer =
+            null;
+
+        }
 
 
         // --------------------------------
         // OUTPUT
         // --------------------------------
 
+        if (chunks.length === 0) {
+
+          throw new Error(
+            "Voice video recording produced no data."
+          );
+
+        }
+
+
         const blob =
           new Blob(
             chunks,
             {
-              type:
-                "video/webm"
+              type: "video/webm"
             }
           );
 
@@ -3398,7 +3377,7 @@ if (chunks.length === 0) {
         if (blob.size === 0) {
 
           throw new Error(
-            "Voice video export is empty."
+            "Voice video is empty."
           );
 
         }
@@ -3419,7 +3398,7 @@ if (chunks.length === 0) {
             "video-with-own-voice.webm";
 
           downloadVoiceVideo.textContent =
-            "Download Video With Voice";
+            "Download Video With Own Voice";
 
           downloadVoiceVideo.style.display =
             "inline-block";
@@ -3430,7 +3409,7 @@ if (chunks.length === 0) {
         if (voiceExportStatus) {
 
           voiceExportStatus.textContent =
-            "✅ Video with your voice ready";
+            "✅ Video + own voice ready";
 
         }
 
@@ -3438,7 +3417,7 @@ if (chunks.length === 0) {
       } catch (error) {
 
         console.error(
-          "Voice video export error:",
+          "Own voice export error:",
           error
         );
 
@@ -3455,6 +3434,15 @@ if (chunks.length === 0) {
         }
 
       } finally {
+
+        if (stopTimer) {
+
+          clearTimeout(
+            stopTimer
+          );
+
+        }
+
 
         if (animationFrame) {
 
@@ -3519,11 +3507,7 @@ if (chunks.length === 0) {
 
             await audioContext.close();
 
-          } catch (e) {
-
-            console.log(e);
-
-          }
+          } catch (e) {}
 
         }
 
@@ -3543,3 +3527,5 @@ if (chunks.length === 0) {
   );
 
 })();
+
+  
