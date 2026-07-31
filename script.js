@@ -349,7 +349,11 @@ exportTrim.addEventListener("click", async () => {
 
   const audioInput =
     document.getElementById("audioInput");
+const previewMusic =
+  document.getElementById("previewMusic");
 
+const stopMusic =
+  document.getElementById("stopMusic");
   const addMusic =
     document.getElementById("addMusic");
 
