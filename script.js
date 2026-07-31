@@ -3148,46 +3148,6 @@ if (voiceMusicURL) {
         destination =
           audioContext.createMediaStreamDestination();
 
-// --------------------------------
-// BACKGROUND MUSIC
-// --------------------------------
-
-if (voiceMusicURL) {
-
-  musicAudio =
-    document.createElement("audio");
-
-  musicAudio.src =
-    voiceMusicURL;
-
-  musicAudio.preload =
-    "auto";
-
-  musicAudio.loop =
-    true;
-
-
-  await new Promise(
-    (resolve, reject) => {
-
-      musicAudio.onloadedmetadata =
-        resolve;
-
-      musicAudio.onerror = () => {
-
-        reject(
-          new Error(
-            "Could not load background music."
-          )
-        );
-
-      };
-
-    }
-  );
-
-}
-
         // --------------------------------
         // OWN VOICE ONLY
         // --------------------------------
@@ -3378,6 +3338,9 @@ if (musicAudio) {
         video.currentTime = 0;
         voiceAudio.currentTime = 0;
 
+if (musicAudio) {
+  musicAudio.currentTime = 0;
+}
 
         recorder.start(200);
 
@@ -3495,6 +3458,7 @@ if (musicAudio) {
 
           video.pause();
           voiceAudio.pause();
+          
 
 
           if (
@@ -3700,6 +3664,13 @@ if (musicAudio) {
           } catch (e) {}
 
         }
+if (musicAudio) {
+
+  try {
+    musicAudio.pause();
+  } catch (e) {}
+
+}
 
 
         if (combinedStream) {
