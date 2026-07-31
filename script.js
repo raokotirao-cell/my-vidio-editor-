@@ -3242,99 +3242,147 @@ if (chunks.length === 0) {
         drawFrame();
 
 
-        // --------------------------------
-        // STOP AT VIDEO END
-        // --------------------------------
+        // 
 
-        const stopExport =
-          () => {
+// --------------------------------
+// STOP AT VIDEO END
+// --------------------------------
 
-            if (
-              video.ended ||
-              video.currentTime >=
-                video.duration - 0.1
-            ) {
+let exportFinished = false;
+let safetyTimer = null;
 
-              finishExport();
+const finishExport = async () => {
 
-            }
+  if (exportFinished) {
+    return;
+  }
 
-          };
+  exportFinished = true;
 
+  drawing = false;
 
-        let exportFinished =
-          false;
+  video.pause();
+  voiceAudio.pause();
 
+  video.removeEventListener(
+    "timeupdate",
+    stopExport
+  );
 
-        const finishExport =
-          () => {
+  if (animationFrame) {
+    cancelAnimationFrame(
+      animationFrame
+    );
+  }
 
-            if (exportFinished) {
-              return;
-            }
+  // Give MediaRecorder time
+  // to collect the last frames.
+  try {
 
+    if (
+      recorder &&
+      recorder.state === "recording"
+    ) {
 
-            exportFinished = true;
+      recorder.requestData();
 
+      await new Promise(resolve =>
+        setTimeout(resolve, 300)
+      );
 
-            drawing = false;
+      if (
+        recorder.state !== "inactive"
+      ) {
 
+        recorder.stop();
 
-            video.pause();
+      }
 
-            voiceAudio.pause();
+    }
 
+  } catch (e) {
 
-            video.removeEventListener(
-              "timeupdate",
-              stopExport
-            );
+    console.log(
+      "Recorder stop warning:",
+      e
+    );
 
+  }
 
-            if (animationFrame) {
-
-              cancelAnimationFrame(
-                animationFrame
-              );
-
-            }
-
-
-            if (
-              recorder &&
-              recorder.state !==
-                "inactive"
-            ) {
-
-              recorder.stop();
-
-            }
-
-          };
-
-
-        video.addEventListener(
-          "timeupdate",
-          stopExport
-        );
+};
 
 
-        // Safety timeout
-        const safetyTimer =
-          setTimeout(
-            () => {
+const stopExport = () => {
 
-              finishExport();
+  if (
+    video.ended ||
+    video.currentTime >=
+      video.duration - 0.15
+  ) {
 
-            },
-            Math.max(
-              2000,
-              (video.duration * 1000) + 1500
-            )
-          );
+    finishExport();
+
+  }
+
+};
 
 
-        await finished;
+video.addEventListener(
+  "timeupdate",
+  stopExport
+);
+
+
+// Safety timeout
+
+safetyTimer =
+  setTimeout(
+    () => {
+
+      finishExport();
+
+    },
+    Math.max(
+      3000,
+      (video.duration * 1000) + 2000
+    )
+  );
+
+
+await finished;
+
+
+if (safetyTimer) {
+
+  clearTimeout(
+    safetyTimer
+  );
+
+}
+
+
+// --------------------------------
+// CHECK RECORDED DATA
+// --------------------------------
+
+if (chunks.length === 0) {
+
+  throw new Error(
+    "Recorder produced no voice video data."
+  );
+
+}
+
+       
+
+
+
+
+
+
+
+
+            
 
 
         clearTimeout(
