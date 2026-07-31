@@ -1045,3 +1045,615 @@ videoGain.gain.value =
   }
 
 })();
+// ============================================
+// COMBINE 2 PARTS - ISOLATED CODE
+// ============================================
+
+(() => {
+
+  const exportTwoParts =
+    document.getElementById("exportTwoParts");
+
+  const twoPartsStatus =
+    document.getElementById("twoPartsStatus");
+
+  const downloadTwoParts =
+    document.getElementById("downloadTwoParts");
+
+  const part1Start =
+    document.getElementById("part1Start");
+
+  const part1End =
+    document.getElementById("part1End");
+
+  const part2Start =
+    document.getElementById("part2Start");
+
+  const part2End =
+    document.getElementById("part2End");
+
+
+  if (!exportTwoParts) {
+    return;
+  }
+
+
+  exportTwoParts.addEventListener(
+    "click",
+    async () => {
+
+      let video = null;
+      let canvas = null;
+      let ctx = null;
+      let audioContext = null;
+      let combinedStream = null;
+      let videoStream = null;
+      let recorder = null;
+
+      let animationFrame = null;
+
+      try {
+
+        // --------------------------------
+        // CHECK VIDEO
+        // --------------------------------
+
+        if (!videoURL) {
+          alert("Please select a video first.");
+          return;
+        }
+
+
+        // --------------------------------
+        // GET TIMES
+        // --------------------------------
+
+        const p1Start =
+          Number(part1Start.value);
+
+        const p1End =
+          Number(part1End.value);
+
+        const p2Start =
+          Number(part2Start.value);
+
+        const p2End =
+          Number(part2End.value);
+
+
+        if (
+          !Number.isFinite(p1Start) ||
+          !Number.isFinite(p1End) ||
+          !Number.isFinite(p2Start) ||
+          !Number.isFinite(p2End)
+        ) {
+          alert("Please enter valid times.");
+          return;
+        }
+
+
+        if (
+          p1Start < 0 ||
+          p1End <= p1Start ||
+          p2Start < 0 ||
+          p2End <= p2Start
+        ) {
+          alert("Please enter valid Part 1 and Part 2 times.");
+          return;
+        }
+
+
+        // --------------------------------
+        // BUTTON STATE
+        // --------------------------------
+
+        exportTwoParts.disabled = true;
+
+        if (twoPartsStatus) {
+          twoPartsStatus.textContent =
+            "Preparing combined video...";
+        }
+
+
+        // --------------------------------
+        // CREATE VIDEO
+        // --------------------------------
+
+        video =
+          document.createElement("video");
+
+        video.src = videoURL;
+        video.preload = "auto";
+        video.playsInline = true;
+
+
+        await new Promise(
+          (resolve, reject) => {
+
+            video.onloadedmetadata =
+              resolve;
+
+            video.onerror =
+              () => {
+                reject(
+                  new Error(
+                    "Could not load video."
+                  )
+                );
+              };
+
+          }
+        );
+
+
+        const duration =
+          video.duration;
+
+
+        // --------------------------------
+        // VALIDATE AGAINST VIDEO
+        // --------------------------------
+
+        if (
+          p1End > duration ||
+          p2End > duration
+        ) {
+          throw new Error(
+            "Part time is longer than video duration."
+          );
+        }
+
+
+        // --------------------------------
+        // CANVAS
+        // --------------------------------
+
+        canvas =
+          document.createElement("canvas");
+
+        canvas.width =
+          video.videoWidth;
+
+        canvas.height =
+          video.videoHeight;
+
+        ctx =
+          canvas.getContext("2d");
+
+
+        // --------------------------------
+        // AUDIO
+        // --------------------------------
+
+        const AudioContext =
+          window.AudioContext ||
+          window.webkitAudioContext;
+
+        audioContext =
+          new AudioContext();
+
+
+        const destination =
+          audioContext.createMediaStreamDestination();
+
+
+        const videoSource =
+          audioContext.createMediaElementSource(
+            video
+          );
+
+
+        const videoGain =
+          audioContext.createGain();
+
+        videoGain.gain.value = 1;
+
+
+        videoSource.connect(
+          videoGain
+        );
+
+        videoGain.connect(
+          destination
+        );
+
+
+        // --------------------------------
+        // STREAM
+        // --------------------------------
+
+        videoStream =
+          canvas.captureStream(30);
+
+
+        combinedStream =
+          new MediaStream();
+
+
+        videoStream
+          .getVideoTracks()
+          .forEach(track => {
+            combinedStream.addTrack(track);
+          });
+
+
+        destination
+          .stream
+          .getAudioTracks()
+          .forEach(track => {
+            combinedStream.addTrack(track);
+          });
+
+
+        // --------------------------------
+        // MIME TYPE
+        // --------------------------------
+
+        let mimeType = "";
+
+        const formats = [
+          "video/webm;codecs=vp9,opus",
+          "video/webm;codecs=vp8,opus",
+          "video/webm"
+        ];
+
+
+        for (
+          const format of formats
+        ) {
+
+          if (
+            MediaRecorder.isTypeSupported(
+              format
+            )
+          ) {
+            mimeType = format;
+            break;
+          }
+
+        }
+
+
+        if (!mimeType) {
+          throw new Error(
+            "WebM recording is not supported."
+          );
+        }
+
+
+        // --------------------------------
+        // RECORDER
+        // --------------------------------
+
+        recorder =
+          new MediaRecorder(
+            combinedStream,
+            {
+              mimeType: mimeType
+            }
+          );
+
+
+        const chunks = [];
+
+
+        recorder.ondataavailable =
+          event => {
+
+            if (
+              event.data &&
+              event.data.size > 0
+            ) {
+              chunks.push(
+                event.data
+              );
+            }
+
+          };
+
+
+        const finished =
+          new Promise(resolve => {
+
+            recorder.onstop =
+              resolve;
+
+          });
+
+
+        // --------------------------------
+        // START RECORDING
+        // --------------------------------
+
+        await audioContext.resume();
+
+        recorder.start(200);
+
+
+        // --------------------------------
+        // DRAW LOOP
+        // --------------------------------
+
+        let drawing = true;
+
+        const drawFrame = () => {
+
+          if (!drawing) {
+            return;
+          }
+
+          ctx.drawImage(
+            video,
+            0,
+            0,
+            canvas.width,
+            canvas.height
+          );
+
+          animationFrame =
+            requestAnimationFrame(
+              drawFrame
+            );
+
+        };
+
+
+        drawFrame();
+
+
+        // --------------------------------
+        // PLAY PART FUNCTION
+        // --------------------------------
+
+        const playPart =
+          async (start, end) => {
+
+            return new Promise(
+              async (resolve, reject) => {
+
+                try {
+
+                  video.currentTime =
+                    start;
+
+
+                  await new Promise(
+                    seekResolve => {
+
+                      const seeked =
+                        () => {
+
+                          video.removeEventListener(
+                            "seeked",
+                            seeked
+                          );
+
+                          seekResolve();
+
+                        };
+
+                      video.addEventListener(
+                        "seeked",
+                        seeked
+                      );
+
+                    }
+                  );
+
+
+                  const stopAtEnd =
+                    () => {
+
+                      if (
+                        video.currentTime >= end
+                      ) {
+
+                        video.pause();
+
+                        video.removeEventListener(
+                          "timeupdate",
+                          stopAtEnd
+                        );
+
+                        resolve();
+
+                      }
+
+                    };
+
+
+                  video.addEventListener(
+                    "timeupdate",
+                    stopAtEnd
+                  );
+
+
+                  await video.play();
+
+                } catch (error) {
+
+                  reject(error);
+
+                }
+
+              }
+            );
+
+          };
+
+
+        // --------------------------------
+        // PART 1
+        // --------------------------------
+
+        if (twoPartsStatus) {
+          twoPartsStatus.textContent =
+            "Exporting Part 1...";
+        }
+
+
+        await playPart(
+          p1Start,
+          p1End
+        );
+
+
+        // --------------------------------
+        // PART 2
+        // --------------------------------
+
+        if (twoPartsStatus) {
+          twoPartsStatus.textContent =
+            "Exporting Part 2...";
+        }
+
+
+        await playPart(
+          p2Start,
+          p2End
+        );
+
+
+        // --------------------------------
+        // STOP
+        // --------------------------------
+
+        drawing = false;
+
+        if (animationFrame) {
+          cancelAnimationFrame(
+            animationFrame
+          );
+        }
+
+
+        video.pause();
+
+
+        if (
+          recorder.state !== "inactive"
+        ) {
+          recorder.stop();
+        }
+
+
+        await finished;
+
+
+        // --------------------------------
+        // OUTPUT
+        // --------------------------------
+
+        const blob =
+          new Blob(
+            chunks,
+            {
+              type: "video/webm"
+            }
+          );
+
+
+        const url =
+          URL.createObjectURL(blob);
+
+
+        downloadTwoParts.href =
+          url;
+
+        downloadTwoParts.download =
+          "combined-video.webm";
+
+        downloadTwoParts.textContent =
+          "Download Combined Video";
+
+        downloadTwoParts.style.display =
+          "inline-block";
+
+
+        const finalDuration =
+          (p1End - p1Start) +
+          (p2End - p2Start);
+
+
+        if (twoPartsStatus) {
+          twoPartsStatus.textContent =
+            "Combined video ready ✅ (" +
+            finalDuration.toFixed(1) +
+            " sec)";
+        }
+
+
+      } catch (error) {
+
+        console.error(
+          "Two parts export error:",
+          error
+        );
+
+
+        if (twoPartsStatus) {
+          twoPartsStatus.textContent =
+            "❌ Export failed: " +
+            (
+              error.message ||
+              String(error)
+            );
+        }
+
+
+      } finally {
+
+        if (animationFrame) {
+          cancelAnimationFrame(
+            animationFrame
+          );
+        }
+
+
+        if (video) {
+          video.pause();
+        }
+
+
+        if (combinedStream) {
+
+          combinedStream
+            .getTracks()
+            .forEach(track => {
+              track.stop();
+            });
+
+        }
+
+
+        if (videoStream) {
+
+          videoStream
+            .getTracks()
+            .forEach(track => {
+              track.stop();
+            });
+
+        }
+
+
+        if (audioContext) {
+
+          try {
+            await audioContext.close();
+          } catch (e) {
+            console.log(e);
+          }
+
+        }
+
+
+        exportTwoParts.disabled =
+          false;
+
+      }
+
+    }
+  );
+
+})();
