@@ -2540,7 +2540,28 @@ const voiceVolumeValue =
   let recordedVoiceChunks = [];
   let recordedVoiceBlob = null;
   let recordedVoiceURL = null;
+  if (voiceVolume) {
 
+  voiceVolume.addEventListener(
+    "input",
+    () => {
+
+      const value =
+        Math.round(
+          Number(voiceVolume.value) * 100
+        );
+
+      if (voiceVolumeValue) {
+
+        voiceVolumeValue.textContent =
+          value + "%";
+
+      }
+
+    }
+  );
+
+}
 
   // --------------------------------
   // AUDIO MIME TYPE
