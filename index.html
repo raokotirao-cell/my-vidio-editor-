@@ -263,7 +263,46 @@
   <!-- =========================
        SCRIPT
   ========================== -->
-  
+  <!-- ============================================
+     COMBINE MULTIPLE VIDEOS
+============================================= -->
+
+<section id="combineVideosSection">
+
+  <h2>Combine Multiple Videos</h2>
+
+  <label for="multiVideoInput">
+    Select Videos
+  </label>
+
+  <input
+    type="file"
+    id="multiVideoInput"
+    accept="video/*"
+    multiple
+  >
+
+  <p id="selectedVideosStatus">
+    No videos selected.
+  </p>
+
+  <button
+    id="combineVideosButton"
+    type="button"
+  >
+    Combine Videos
+  </button>
+
+  <p id="combineVideosStatus"></p>
+
+  <a
+    id="downloadCombinedVideos"
+    style="display:none;"
+  >
+    Download Combined Video
+  </a>
+
+</section>
 <script src="script.js"></script>
 
 </body>
