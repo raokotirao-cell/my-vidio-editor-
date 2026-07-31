@@ -564,12 +564,18 @@ exportTrim.addEventListener("click", async () => {
             audioContext.createMediaElementSource(
               exportVideo
             );
+         const muteOriginalAudio =
+  document.getElementById("muteOriginalAudio");
 
-          const videoGain =
-            audioContext.createGain();
+const videoGain =
+  audioContext.createGain();
 
-          videoGain.gain.value = 1;
-
+videoGain.gain.value =
+  muteOriginalAudio &&
+  muteOriginalAudio.checked
+    ? 0
+    : 1;
+          
           videoSource.connect(videoGain);
           videoGain.connect(destination);
 
