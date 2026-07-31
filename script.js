@@ -2517,6 +2517,11 @@ if (chunks.length === 0) {
   const voiceExportStatus =
     document.getElementById("voiceExportStatus");
 
+const voiceVolume =
+  document.getElementById("voiceVolume");
+
+const voiceVolumeValue =
+  document.getElementById("voiceVolumeValue");
   const downloadVoiceVideo =
     document.getElementById("downloadVoiceVideo");
 
@@ -3022,7 +3027,11 @@ exportVoiceVideo.disabled = false;
 
 
         voiceGain.gain.value =
-          1;
+  Number(
+    voiceVolume
+      ? voiceVolume.value
+      : 1
+  );
 
 
         voiceSource.connect(
