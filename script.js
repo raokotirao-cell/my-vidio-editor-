@@ -2287,21 +2287,55 @@ video.pause();
         }
 
 
+   
+
         // --------------------------------
-        // STOP RECORDING
-        // --------------------------------
+// STOP RECORDING
+// --------------------------------
 
-        if (
-          recorder.state !== "inactive"
-        ) {
+// Give MediaRecorder time to flush
+// the last video frames.
 
-          recorder.stop();
+if (
+  recorder.state === "recording"
+) {
 
-        }
+  try {
+
+    recorder.requestData();
+
+  } catch (e) {
+
+    console.log(
+      "requestData warning:",
+      e
+    );
+
+  }
 
 
-        await finished;
+  await new Promise(
+    resolve => setTimeout(resolve, 300)
+  );
 
+
+  recorder.stop();
+
+}
+
+
+await finished;
+
+
+// Make sure some data was actually received
+
+if (chunks.length === 0) {
+
+  throw new Error(
+    "Recorder produced no video data."
+  );
+
+}
 
         // --------------------------------
         // CREATE OUTPUT
