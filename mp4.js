@@ -1,9 +1,4 @@
-zz  import { FFmpeg } from "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js";
-import {
-  fetchFile,
-  toBlobURL
-} from "https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js";
-
+import { FFmpeg } from "./ffmpeg/index.js";
 const exportMp4 =
   document.getElementById("exportMp4");
 
