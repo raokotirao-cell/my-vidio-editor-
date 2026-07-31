@@ -2166,80 +2166,92 @@ videoGain.gain.value =
           // --------------------------------
           // PLAY VIDEO
           // --------------------------------
+await new Promise(
+  async (resolve, reject) => {
 
-          await new Promise(
-            async (resolve, reject) => {
+    let finished = false;
 
-              const cleanup = () => {
+    const finish = () => {
 
-                video.onended = null;
-                video.onerror = null;
+      if (finished) {
+        return;
+      }
 
-              };
+      finished = true;
 
+      video.removeEventListener(
+        "timeupdate",
+        checkEnd
+      );
 
-              video.onended = () => {
+      video.removeEventListener(
+        "ended",
+        finish
+      );
 
-                cleanup();
+      resolve();
 
-                resolve();
+    };
 
-              };
+    const checkEnd = () => {
 
+      if (
+        Number.isFinite(video.duration) &&
+        video.currentTime >=
+          video.duration - 0.15
+      ) {
 
-              video.onerror = () => {
+        finish();
 
-                cleanup();
+      }
 
-                reject(
-                  new Error(
-                    "Playback failed for video " +
-                    (i + 1)
-                  )
-                );
+    };
 
-              };
+    video.addEventListener(
+      "timeupdate",
+      checkEnd
+    );
 
+    video.addEventListener(
+      "ended",
+      finish
+    );
 
-              try {
+    video.onerror = () => {
 
-                await video.play();
+      if (!finished) {
 
-              } catch (playError) {
+        finished = true;
 
-                cleanup();
+        reject(
+          new Error(
+            "Playback failed for video " +
+            (i + 1)
+          )
+        );
 
-                reject(
-                  playError
-                );
+      }
 
-              }
+    };
 
-            }
-          );
+    try {
 
+      await video.play();
 
-          video.pause();
+    } catch (playError) {
 
+      reject(playError);
 
-          // Stop this video's audio source
-          if (audioSource) {
+    }
 
-            try {
+  }
+);
 
-              audioSource.disconnect();
+video.pause();
+          
+                 
 
-            } catch (e) {
-
-              console.log(e);
-
-            }
-
-          }
-
-        }
-
-
+              
         // --------------------------------
         // STOP DRAWING
         // --------------------------------
