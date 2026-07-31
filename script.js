@@ -2552,6 +2552,7 @@ const voiceVolumeValue =
   let recordedVoiceURL = null;
   let voiceMusicFile = null;
 let voiceMusicURL = null;
+let musicAudio = null;
 if (voiceMusicVolume) {
 
   voiceMusicVolume.addEventListener(
@@ -3053,6 +3054,44 @@ exportVoiceVideo.disabled = false;
 
           }
         );
+// --------------------------------
+// LOAD BACKGROUND MUSIC
+// --------------------------------
+
+if (voiceMusicURL) {
+
+  musicAudio =
+    document.createElement("audio");
+
+  musicAudio.src =
+    voiceMusicURL;
+
+  musicAudio.preload =
+    "auto";
+
+  musicAudio.loop =
+    true;
+
+  await new Promise(
+    (resolve, reject) => {
+
+      musicAudio.onloadedmetadata =
+        resolve;
+
+      musicAudio.onerror = () => {
+
+        reject(
+          new Error(
+            "Could not load background music."
+          )
+              );
+    };
+
+  });
+
+}
+
+}
 
 
         // --------------------------------
@@ -3109,6 +3148,45 @@ exportVoiceVideo.disabled = false;
         destination =
           audioContext.createMediaStreamDestination();
 
+// --------------------------------
+// BACKGROUND MUSIC
+// --------------------------------
+
+if (voiceMusicURL) {
+
+  musicAudio =
+    document.createElement("audio");
+
+  musicAudio.src =
+    voiceMusicURL;
+
+  musicAudio.preload =
+    "auto";
+
+  musicAudio.loop =
+    true;
+
+
+  await new Promise(
+    (resolve, reject) => {
+
+      musicAudio.onloadedmetadata =
+        resolve;
+
+      musicAudio.onerror = () => {
+
+        reject(
+          new Error(
+            "Could not load background music."
+          )
+        );
+
+      };
+
+    }
+  );
+
+}
 
         // --------------------------------
         // OWN VOICE ONLY
@@ -3140,6 +3218,36 @@ exportVoiceVideo.disabled = false;
         voiceGain.connect(
           destination
         );
+// --------------------------------
+// BACKGROUND MUSIC SOURCE
+// --------------------------------
+
+if (musicAudio) {
+
+  const musicSource =
+    audioContext.createMediaElementSource(
+      musicAudio
+    );
+
+  const musicGain =
+    audioContext.createGain();
+
+  musicGain.gain.value =
+    Number(
+      voiceMusicVolume
+        ? voiceMusicVolume.value
+        : 0.3
+    );
+
+  musicSource.connect(
+    musicGain
+  );
+
+  musicGain.connect(
+    destination
+  );
+
+}
 
 
         // --------------------------------
@@ -3280,6 +3388,22 @@ exportVoiceVideo.disabled = false;
         try {
 
           await voiceAudio.play();
+       if (musicAudio) {
+
+  try {
+
+    await musicAudio.play();
+
+  } catch (musicError) {
+
+    console.warn(
+      "Background music warning:",
+      musicError
+    );
+
+  }
+
+}
 
         } catch (voiceError) {
 
