@@ -1,4 +1,3 @@
-import { FFmpeg } from "./ffmpeg/index.js";
 const exportMp4 =
   document.getElementById("exportMp4");
 
@@ -20,46 +19,84 @@ const endTime =
 let ffmpeg = null;
 let ffmpegLoaded = false;
 
+
+// ============================================
+// LOAD FFMPEG
+// ============================================
+
 async function loadFFmpeg() {
 
   if (ffmpegLoaded) {
     return;
   }
 
-  mp4Status.textContent =
-    "Loading MP4 converter...";
+  if (mp4Status) {
+    mp4Status.textContent =
+      "Loading MP4 converter...";
+  }
+
+
+  // Check FFmpeg library
+  if (
+    !window.FFmpegWASM ||
+    !window.FFmpegWASM.FFmpeg
+  ) {
+    throw new Error(
+      "FFmpeg library not loaded."
+    );
+  }
+
 
   ffmpeg =
-    new FFmpeg();
+    new window.FFmpegWASM.FFmpeg();
 
-  ffmpeg.on("log", ({ message }) => {
-    console.log("FFmpeg:", message);
+
+  // FFmpeg logs
+  ffmpeg.on(
+    "log",
+    ({ message }) => {
+
+      console.log(
+        "FFmpeg:",
+        message
+      );
+
+    }
+  );
+
+
+  // Load local core files
+  await ffmpeg.load({
+
+    coreURL:
+      window.location.origin +
+      "/ffmpeg/ffmpeg-core.js",
+
+    wasmURL:
+      window.location.origin +
+      "/ffmpeg/ffmpeg-core.wasm",
+
+    classWorkerURL:
+      window.location.origin +
+      "/ffmpeg/worker.js"
+
   });
 
-  const baseURL =
-    "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
 
-  await ffmpeg.load({
-  classWorkerURL:
-  window.location.origin + "/ffmpeg/worker.js",
-  coreURL:
-    await toBlobURL(
-      `${baseURL}/ffmpeg-core.js`,
-      "text/javascript"
-    ),
-
-  wasmURL:
-    await toBlobURL(
-      `${baseURL}/ffmpeg-core.wasm`,
-      "application/wasm"
-    )
-});
   ffmpegLoaded = true;
 
-  mp4Status.textContent =
-    "MP4 converter ready ✅";
+
+  if (mp4Status) {
+    mp4Status.textContent =
+      "MP4 converter ready ✅";
+  }
+
 }
 
+
+// ============================================
+// CONVERT MP4
+// ============================================
 
 if (exportMp4) {
 
@@ -71,27 +108,50 @@ if (exportMp4) {
 
         exportMp4.disabled = true;
 
-        downloadMp4.style.display =
-          "none";
+
+        if (downloadMp4) {
+          downloadMp4.style.display =
+            "none";
+        }
+
+
+        // -------------------------------
+        // LOAD FFMPEG
+        // -------------------------------
 
         await loadFFmpeg();
 
 
+        // -------------------------------
+        // GET VIDEO
+        // -------------------------------
+
         const file =
           videoInput.files[0];
 
+
         if (!file) {
+
           throw new Error(
             "Please select a video first."
           );
+
         }
 
 
+        // -------------------------------
+        // GET TIME
+        // -------------------------------
+
         const start =
-          Number(startTime.value);
+          Number(
+            startTime.value
+          );
 
         const end =
-          Number(endTime.value);
+          Number(
+            endTime.value
+          );
 
         const duration =
           end - start;
@@ -100,89 +160,169 @@ if (exportMp4) {
         if (
           !Number.isFinite(start) ||
           !Number.isFinite(end) ||
-          duration <= 0
+          start < 0 ||
+          end <= start
         ) {
+
           throw new Error(
             "Please enter valid Start and End times."
           );
+
         }
 
 
-        mp4Status.textContent =
-          "Preparing video...";
+        // -------------------------------
+        // STATUS
+        // -------------------------------
+
+        if (mp4Status) {
+
+          mp4Status.textContent =
+            "Preparing video...";
+
+        }
+
+
+        // -------------------------------
+        // INPUT FILE
+        // -------------------------------
+
+        const inputData =
+          new Uint8Array(
+            await file.arrayBuffer()
+          );
 
 
         await ffmpeg.writeFile(
-          "input",
-          await fetchFile(file)
+          "input.mp4",
+          inputData
         );
 
 
-        mp4Status.textContent =
-          "Converting to MP4...";
+        // -------------------------------
+        // CONVERT
+        // -------------------------------
+
+        if (mp4Status) {
+
+          mp4Status.textContent =
+            "Converting to MP4...";
+
+        }
 
 
-        const exitCode = await ffmpeg.exec([
-          "-ss",
-          String(start),
+        const exitCode =
+          await ffmpeg.exec([
 
-          "-i",
-          "input",
+            "-ss",
+            String(start),
 
-          "-t",
-          String(duration),
+            "-i",
+            "input.mp4",
 
-          "-c:v",
-          "libx264",
+            "-t",
+            String(duration),
 
-          "-c:a",
-          "aac",
+            "-c:v",
+            "libx264",
 
-          "-movflags",
-          "+faststart",
+            "-preset",
+            "veryfast",
 
-          "output.mp4"
-        ]);
+            "-crf",
+            "23",
 
-         if (exitCode !== 0) {
-  throw new Error(
-    "FFmpeg conversion failed. Exit code: " + exitCode
-  );
-}
-        const data =
+            "-c:a",
+            "aac",
+
+            "-b:a",
+            "128k",
+
+            "-movflags",
+            "+faststart",
+
+            "output.mp4"
+
+          ]);
+
+
+        // -------------------------------
+        // CHECK RESULT
+        // -------------------------------
+
+        if (exitCode !== 0) {
+
+          throw new Error(
+            "FFmpeg conversion failed. Exit code: " +
+            exitCode
+          );
+
+        }
+
+
+        // -------------------------------
+        // READ OUTPUT
+        // -------------------------------
+
+        const output =
           await ffmpeg.readFile(
             "output.mp4"
           );
 
 
+        // -------------------------------
+        // CREATE BLOB
+        // -------------------------------
+
         const blob =
           new Blob(
-            [data.buffer],
+            [output.buffer],
             {
-              type: "video/mp4"
+              type:
+                "video/mp4"
             }
           );
 
 
-        const url =
+        // -------------------------------
+        // DOWNLOAD URL
+        // -------------------------------
+
+        const mp4URL =
           URL.createObjectURL(blob);
 
 
-        downloadMp4.href =
-          url;
+        // -------------------------------
+        // DOWNLOAD LINK
+        // -------------------------------
 
-        downloadMp4.download =
-          "trimmed-video.mp4";
+        if (downloadMp4) {
 
-        downloadMp4.textContent =
-          "Download MP4";
+          downloadMp4.href =
+            mp4URL;
 
-        downloadMp4.style.display =
-          "inline-block";
+          downloadMp4.download =
+            "trimmed-video.mp4";
+
+          downloadMp4.textContent =
+            "Download MP4";
+
+          downloadMp4.style.display =
+            "inline-block";
+
+        }
 
 
-        mp4Status.textContent =
-          "MP4 ready ✅";
+        // -------------------------------
+        // SUCCESS
+        // -------------------------------
+
+        if (mp4Status) {
+
+          mp4Status.textContent =
+            "MP4 ready ✅";
+
+        }
 
 
       } catch (error) {
@@ -192,13 +332,23 @@ if (exportMp4) {
           error
         );
 
-        mp4Status.textContent =
-          "❌ MP4 failed: " +
-          error.message;
+
+        if (mp4Status) {
+
+          mp4Status.textContent =
+            "❌ MP4 failed: " +
+            (
+              error?.message ||
+              String(error)
+            );
+
+        }
+
 
       } finally {
 
-        exportMp4.disabled = false;
+        exportMp4.disabled =
+          false;
 
       }
 
