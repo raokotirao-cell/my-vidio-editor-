@@ -2988,28 +2988,18 @@ if (chunks.length === 0) {
         // --------------------------------
         // OWN VOICE AUDIO
         // --------------------------------
+const videoSource =
+  audioContext.createMediaElementSource(
+    video
+  );
 
-        const voiceSource =
-          audioContext.createMediaElementSource(
-            voiceAudio
-          );
+const videoGain =
+  audioContext.createGain();
 
+videoGain.gain.value = 0;
 
-        const voiceGain =
-          audioContext.createGain();
-
-
-        voiceGain.gain.value =
-          1;
-
-
-        voiceSource.connect(
-          voiceGain
-        );
-
-        voiceGain.connect(
-          destination
-        );
+videoSource.connect(videoGain);
+videoGain.connect(destination);
 
 
         // --------------------------------
