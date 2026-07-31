@@ -1,8 +1,8 @@
- import { FFmpeg } from "./ffmpeg/index.js";
-
-const ffmpeg = new FFmpeg();
-
-let ffmpegLoaded = false;
+  import { FFmpeg } from "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js";
+import {
+  fetchFile,
+  toBlobURL
+} from "https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js";
 
 const exportMp4 =
   document.getElementById("exportMp4");
@@ -13,28 +13,55 @@ const mp4Status =
 const downloadMp4 =
   document.getElementById("downloadMp4");
 
+const videoInput =
+  document.getElementById("videoInput");
+
+const startTime =
+  document.getElementById("startTime");
+
+const endTime =
+  document.getElementById("endTime");
+
+let ffmpeg = null;
+let ffmpegLoaded = false;
+
 async function loadFFmpeg() {
 
   if (ffmpegLoaded) {
     return;
   }
 
-  if (mp4Status) {
-    mp4Status.textContent =
-      "Loading MP4 converter...";
-  }
+  mp4Status.textContent =
+    "Loading MP4 converter...";
+
+  ffmpeg =
+    new FFmpeg();
+
+  ffmpeg.on("log", ({ message }) => {
+    console.log("FFmpeg:", message);
+  });
+
+  const baseURL =
+    "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
 
   await ffmpeg.load({
-    coreURL: "./ffmpeg/ffmpeg-core.js",
-    wasmURL: "./ffmpeg/ffmpeg-core.wasm"
+    coreURL:
+      await toBlobURL(
+        `${baseURL}/ffmpeg-core.js`,
+        "text/javascript"
+      ),
+
+    wasmURL:
+      await toBlobURL(
+        `${baseURL}/ffmpeg-core.wasm`,
+        "application/wasm"
+      )
   });
 
   ffmpegLoaded = true;
 
-  if (mp4Status) {
-    mp4Status.textContent =
-      "MP4 converter ready ✅";
-  }
+  mp4Status.textContent =
+    "MP4 converter ready ✅";
 }
 
 
@@ -48,115 +75,63 @@ if (exportMp4) {
 
         exportMp4.disabled = true;
 
+        downloadMp4.style.display =
+          "none";
+
         await loadFFmpeg();
 
 
-        // --------------------------------
-        // GET VIDEO
-        // --------------------------------
+        const file =
+          videoInput.files[0];
 
-        let videoBlob;
-
-        let inputName;
-
-
-        // Prefer trimmed WebM if available
-        if (
-          downloadVideo &&
-          downloadVideo.style.display !== "none" &&
-          downloadVideo.href
-        ) {
-
-          const response =
-            await fetch(downloadVideo.href);
-
-          videoBlob =
-            await response.blob();
-
-          inputName =
-            "input.webm";
-
-        } else {
-
-          const file =
-            videoInput.files[0];
-
-          if (!file) {
-            throw new Error(
-              "Please select a video first."
-            );
-          }
-
-          videoBlob = file;
-
-          const extension =
-            file.name.includes(".")
-              ? file.name
-                  .split(".")
-                  .pop()
-                  .toLowerCase()
-              : "mp4";
-
-          inputName =
-            "input." + extension;
-
-        }
-
-
-        // --------------------------------
-        // WRITE INPUT
-        // --------------------------------
-
-        const inputData =
-          new Uint8Array(
-            await videoBlob.arrayBuffer()
+        if (!file) {
+          throw new Error(
+            "Please select a video first."
           );
-
-
-        await ffmpeg.writeFile(
-          inputName,
-          inputData
-        );
-
-
-        if (mp4Status) {
-          mp4Status.textContent =
-            "Converting to MP4...";
         }
 
-
-        // --------------------------------
-        // TRIM TIME
-        // --------------------------------
 
         const start =
-          Number(
-            document.getElementById(
-              "startTime"
-            ).value
-          );
+          Number(startTime.value);
 
         const end =
-          Number(
-            document.getElementById(
-              "endTime"
-            ).value
-          );
+          Number(endTime.value);
 
         const duration =
           end - start;
 
 
-        // --------------------------------
-        // CONVERT
-        // --------------------------------
+        if (
+          !Number.isFinite(start) ||
+          !Number.isFinite(end) ||
+          duration <= 0
+        ) {
+          throw new Error(
+            "Please enter valid Start and End times."
+          );
+        }
+
+
+        mp4Status.textContent =
+          "Preparing video...";
+
+
+        await ffmpeg.writeFile(
+          "input",
+          await fetchFile(file)
+        );
+
+
+        mp4Status.textContent =
+          "Converting to MP4...";
+
 
         await ffmpeg.exec([
           "-ss",
           String(start),
 
           "-i",
-          inputName,
+          "input",
 
           "-t",
           String(duration),
@@ -174,37 +149,27 @@ if (exportMp4) {
         ]);
 
 
-        // --------------------------------
-        // READ OUTPUT
-        // --------------------------------
-
-        const output =
+        const data =
           await ffmpeg.readFile(
             "output.mp4"
           );
 
 
-        const mp4Blob =
+        const blob =
           new Blob(
-            [output.buffer],
+            [data.buffer],
             {
               type: "video/mp4"
             }
           );
 
 
-        const mp4URL =
-          URL.createObjectURL(
-            mp4Blob
-          );
+        const url =
+          URL.createObjectURL(blob);
 
-
-        // --------------------------------
-        // DOWNLOAD
-        // --------------------------------
 
         downloadMp4.href =
-          mp4URL;
+          url;
 
         downloadMp4.download =
           "trimmed-video.mp4";
@@ -216,10 +181,8 @@ if (exportMp4) {
           "inline-block";
 
 
-        if (mp4Status) {
-          mp4Status.textContent =
-            "MP4 ready ✅";
-        }
+        mp4Status.textContent =
+          "MP4 ready ✅";
 
 
       } catch (error) {
@@ -229,11 +192,9 @@ if (exportMp4) {
           error
         );
 
-        if (mp4Status) {
-          mp4Status.textContent =
-            "❌ MP4 conversion failed: " +
-            error.message;
-        }
+        mp4Status.textContent =
+          "❌ MP4 failed: " +
+          error.message;
 
       } finally {
 
