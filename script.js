@@ -2552,6 +2552,30 @@ const voiceVolumeValue =
   let recordedVoiceURL = null;
   let voiceMusicFile = null;
 let voiceMusicURL = null;
+if (voiceMusicVolume) {
+
+  voiceMusicVolume.addEventListener(
+    "input",
+    () => {
+
+      const value =
+        Math.round(
+          Number(
+            voiceMusicVolume.value
+          ) * 100
+        );
+
+      if (voiceMusicVolumeValue) {
+
+        voiceMusicVolumeValue.textContent =
+          value + "%";
+
+      }
+
+    }
+  );
+
+}
 if (voiceMusicInput) {
 
   voiceMusicInput.addEventListener(
