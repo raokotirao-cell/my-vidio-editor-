@@ -2550,6 +2550,49 @@ const voiceVolumeValue =
   let recordedVoiceChunks = [];
   let recordedVoiceBlob = null;
   let recordedVoiceURL = null;
+  let voiceMusicFile = null;
+let voiceMusicURL = null;
+if (voiceMusicInput) {
+
+  voiceMusicInput.addEventListener(
+    "change",
+    () => {
+
+      const file =
+        voiceMusicInput.files[0];
+
+      if (!file) {
+        return;
+      }
+
+      voiceMusicFile = file;
+
+
+      if (voiceMusicURL) {
+
+        URL.revokeObjectURL(
+          voiceMusicURL
+        );
+
+      }
+
+
+      voiceMusicURL =
+        URL.createObjectURL(file);
+
+
+      if (voiceMusicStatus) {
+
+        voiceMusicStatus.textContent =
+          "Background music selected: " +
+          file.name;
+
+      }
+
+    }
+  );
+
+}
   if (voiceVolume) {
 
   voiceVolume.addEventListener(
