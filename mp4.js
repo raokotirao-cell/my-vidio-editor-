@@ -1,4 +1,4 @@
-  import { FFmpeg } from "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js";
+zz  import { FFmpeg } from "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js";
 import {
   fetchFile,
   toBlobURL
@@ -149,7 +149,11 @@ if (exportMp4) {
           "output.mp4"
         ]);
 
-
+         if (exitCode !== 0) {
+  throw new Error(
+    "FFmpeg conversion failed. Exit code: " + exitCode
+  );
+}
         const data =
           await ffmpeg.readFile(
             "output.mp4"
