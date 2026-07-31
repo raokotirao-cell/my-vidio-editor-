@@ -2516,7 +2516,17 @@ if (chunks.length === 0) {
 
   const voiceExportStatus =
     document.getElementById("voiceExportStatus");
+const voiceMusicInput =
+  document.getElementById("voiceMusicInput");
 
+const voiceMusicStatus =
+  document.getElementById("voiceMusicStatus");
+
+const voiceMusicVolume =
+  document.getElementById("voiceMusicVolume");
+
+const voiceMusicVolumeValue =
+  document.getElementById("voiceMusicVolumeValue");
 const voiceVolume =
   document.getElementById("voiceVolume");
 
