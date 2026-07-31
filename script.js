@@ -2668,7 +2668,7 @@ if (chunks.length === 0) {
 
             voiceRecordingStatus.textContent =
               "❌ Voice recording is empty.";
-
+        exportVoiceVideo.disabled = false;
             return;
 
           }
