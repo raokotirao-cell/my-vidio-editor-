@@ -127,7 +127,7 @@ if (exportMp4) {
           "Converting to MP4...";
 
 
-        await ffmpeg.exec([
+        const exitCode = await ffmpeg.exec([
           "-ss",
           String(start),
 
