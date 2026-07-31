@@ -2495,3 +2495,1012 @@ if (chunks.length === 0) {
   );
 
 })();
+// ============================================
+// RECORD OWN VOICE - ISOLATED CODE
+// ============================================
+
+(() => {
+
+  const startVoiceRecording =
+    document.getElementById("startVoiceRecording");
+
+  const stopVoiceRecording =
+    document.getElementById("stopVoiceRecording");
+
+  const voiceRecordingStatus =
+    document.getElementById("voiceRecordingStatus");
+
+  const exportVoiceVideo =
+    document.getElementById("exportVoiceVideo");
+
+  const voiceExportStatus =
+    document.getElementById("voiceExportStatus");
+
+  const downloadVoiceVideo =
+    document.getElementById("downloadVoiceVideo");
+
+
+  if (
+    !startVoiceRecording ||
+    !stopVoiceRecording ||
+    !exportVoiceVideo
+  ) {
+    return;
+  }
+
+
+  let mediaRecorder = null;
+  let recordedVoiceChunks = [];
+  let recordedVoiceBlob = null;
+  let recordedVoiceURL = null;
+  let microphoneStream = null;
+
+
+  // --------------------------------
+  // FIND AUDIO MIME TYPE
+  // --------------------------------
+
+  const getAudioMimeType = () => {
+
+    const formats = [
+      "audio/webm;codecs=opus",
+      "audio/webm",
+      "audio/ogg;codecs=opus"
+    ];
+
+
+    for (const format of formats) {
+
+      if (
+        MediaRecorder.isTypeSupported(format)
+      ) {
+        return format;
+      }
+
+    }
+
+
+    return "";
+  };
+
+
+  // --------------------------------
+  // START VOICE RECORDING
+  // --------------------------------
+
+  startVoiceRecording.addEventListener(
+    "click",
+    async () => {
+
+      try {
+
+        recordedVoiceChunks = [];
+        recordedVoiceBlob = null;
+
+
+        if (recordedVoiceURL) {
+
+          URL.revokeObjectURL(
+            recordedVoiceURL
+          );
+
+          recordedVoiceURL = null;
+
+        }
+
+
+        voiceRecordingStatus.textContent =
+          "Requesting microphone permission...";
+
+
+        microphoneStream =
+          await navigator.mediaDevices.getUserMedia(
+            {
+              audio: true
+            }
+          );
+
+
+        const mimeType =
+          getAudioMimeType();
+
+
+        if (!mimeType) {
+
+          throw new Error(
+            "Audio recording is not supported."
+          );
+
+        }
+
+
+        mediaRecorder =
+          new MediaRecorder(
+            microphoneStream,
+            {
+              mimeType: mimeType
+            }
+          );
+
+
+        mediaRecorder.ondataavailable =
+          event => {
+
+            if (
+              event.data &&
+              event.data.size > 0
+            ) {
+
+              recordedVoiceChunks.push(
+                event.data
+              );
+
+            }
+
+          };
+
+
+        mediaRecorder.onstop = () => {
+
+          recordedVoiceBlob =
+            new Blob(
+              recordedVoiceChunks,
+              {
+                type: mimeType
+              }
+            );
+
+
+          recordedVoiceURL =
+            URL.createObjectURL(
+              recordedVoiceBlob
+            );
+
+
+          if (voiceRecordingStatus) {
+
+            voiceRecordingStatus.textContent =
+              "Voice recorded ✅";
+
+          }
+
+
+          if (microphoneStream) {
+
+            microphoneStream
+              .getTracks()
+              .forEach(track => {
+                track.stop();
+              });
+
+          }
+
+        };
+
+
+        mediaRecorder.start(200);
+
+
+        startVoiceRecording.disabled =
+          true;
+
+        stopVoiceRecording.disabled =
+          false;
+
+        exportVoiceVideo.disabled =
+          true;
+
+
+        voiceRecordingStatus.textContent =
+          "🎙️ Recording your voice...";
+
+
+      } catch (error) {
+
+        console.error(
+          "Voice recording error:",
+          error
+        );
+
+
+        voiceRecordingStatus.textContent =
+          "❌ Recording failed: " +
+          (
+            error.message ||
+            String(error)
+          );
+
+
+        if (microphoneStream) {
+
+          microphoneStream
+            .getTracks()
+            .forEach(track => {
+              track.stop();
+            });
+
+        }
+
+      }
+
+    }
+  );
+
+
+  // --------------------------------
+  // STOP VOICE RECORDING
+  // --------------------------------
+
+  stopVoiceRecording.addEventListener(
+    "click",
+    () => {
+
+      if (
+        mediaRecorder &&
+        mediaRecorder.state !== "inactive"
+      ) {
+
+        mediaRecorder.stop();
+
+      }
+
+
+      stopVoiceRecording.disabled =
+        true;
+
+      startVoiceRecording.disabled =
+        false;
+
+      exportVoiceVideo.disabled =
+        false;
+
+      voiceRecordingStatus.textContent =
+        "Processing voice recording...";
+
+    }
+  );
+
+
+  // --------------------------------
+  // EXPORT VIDEO WITH OWN VOICE
+  // --------------------------------
+
+  exportVoiceVideo.addEventListener(
+    "click",
+    async () => {
+
+      if (!videoURL) {
+
+        alert(
+          "Please select a video first."
+        );
+
+        return;
+
+      }
+
+
+      if (!recordedVoiceBlob) {
+
+        alert(
+          "Please record your voice first."
+        );
+
+        return;
+
+      }
+
+
+      let video = null;
+      let voiceAudio = null;
+      let canvas = null;
+      let ctx = null;
+
+      let audioContext = null;
+      let destination = null;
+
+      let combinedStream = null;
+      let videoStream = null;
+      let recorder = null;
+
+      let animationFrame = null;
+
+
+      try {
+
+        exportVoiceVideo.disabled =
+          true;
+
+        startVoiceRecording.disabled =
+          true;
+
+        stopVoiceRecording.disabled =
+          true;
+
+
+        if (downloadVoiceVideo) {
+
+          downloadVoiceVideo.style.display =
+            "none";
+
+        }
+
+
+        if (voiceExportStatus) {
+
+          voiceExportStatus.textContent =
+            "Preparing video and voice...";
+
+        }
+
+
+        // --------------------------------
+        // VIDEO
+        // --------------------------------
+
+        video =
+          document.createElement("video");
+
+        video.src =
+          videoURL;
+
+        video.preload =
+          "auto";
+
+        video.playsInline =
+          true;
+
+
+        await new Promise(
+          (resolve, reject) => {
+
+            video.onloadedmetadata =
+              resolve;
+
+            video.onerror = () => {
+
+              reject(
+                new Error(
+                  "Could not load video."
+                )
+              );
+
+            };
+
+          }
+        );
+
+
+        // --------------------------------
+        // VOICE AUDIO
+        // --------------------------------
+
+        voiceAudio =
+          document.createElement("audio");
+
+        voiceAudio.src =
+          recordedVoiceURL;
+
+        voiceAudio.preload =
+          "auto";
+
+
+        await new Promise(
+          (resolve, reject) => {
+
+            voiceAudio.onloadedmetadata =
+              resolve;
+
+            voiceAudio.onerror = () => {
+
+              reject(
+                new Error(
+                  "Could not load recorded voice."
+                )
+              );
+
+            };
+
+          }
+        );
+
+
+        // --------------------------------
+        // CANVAS
+        // --------------------------------
+
+        canvas =
+          document.createElement("canvas");
+
+        canvas.width =
+          video.videoWidth || 1280;
+
+        canvas.height =
+          video.videoHeight || 720;
+
+
+        ctx =
+          canvas.getContext("2d");
+
+
+        if (!ctx) {
+
+          throw new Error(
+            "Could not create canvas."
+          );
+
+        }
+
+
+        // --------------------------------
+        // AUDIO CONTEXT
+        // --------------------------------
+
+        const AudioContext =
+          window.AudioContext ||
+          window.webkitAudioContext;
+
+
+        if (!AudioContext) {
+
+          throw new Error(
+            "Audio mixing is not supported."
+          );
+
+        }
+
+
+        audioContext =
+          new AudioContext();
+
+
+        destination =
+          audioContext.createMediaStreamDestination();
+
+
+        // --------------------------------
+        // ORIGINAL VIDEO AUDIO
+        // --------------------------------
+
+        const videoSource =
+          audioContext.createMediaElementSource(
+            video
+          );
+
+
+        const videoGain =
+          audioContext.createGain();
+
+
+        videoGain.gain.value =
+          1;
+
+
+        videoSource.connect(
+          videoGain
+        );
+
+        videoGain.connect(
+          destination
+        );
+
+
+        // --------------------------------
+        // OWN VOICE AUDIO
+        // --------------------------------
+
+        const voiceSource =
+          audioContext.createMediaElementSource(
+            voiceAudio
+          );
+
+
+        const voiceGain =
+          audioContext.createGain();
+
+
+        voiceGain.gain.value =
+          1;
+
+
+        voiceSource.connect(
+          voiceGain
+        );
+
+        voiceGain.connect(
+          destination
+        );
+
+
+        // --------------------------------
+        // STREAM
+        // --------------------------------
+
+        videoStream =
+          canvas.captureStream(30);
+
+
+        combinedStream =
+          new MediaStream();
+
+
+        videoStream
+          .getVideoTracks()
+          .forEach(track => {
+
+            combinedStream.addTrack(
+              track
+            );
+
+          });
+
+
+        destination
+          .stream
+          .getAudioTracks()
+          .forEach(track => {
+
+            combinedStream.addTrack(
+              track
+            );
+
+          });
+
+
+        // --------------------------------
+        // MIME TYPE
+        // --------------------------------
+
+        let mimeType = "";
+
+
+        const formats = [
+          "video/webm;codecs=vp9,opus",
+          "video/webm;codecs=vp8,opus",
+          "video/webm"
+        ];
+
+
+        for (const format of formats) {
+
+          if (
+            MediaRecorder.isTypeSupported(
+              format
+            )
+          ) {
+
+            mimeType =
+              format;
+
+            break;
+
+          }
+
+        }
+
+
+        if (!mimeType) {
+
+          throw new Error(
+            "WebM recording is not supported."
+          );
+
+        }
+
+
+        // --------------------------------
+        // RECORDER
+        // --------------------------------
+
+        recorder =
+          new MediaRecorder(
+            combinedStream,
+            {
+              mimeType:
+                mimeType
+            }
+          );
+
+
+        const chunks = [];
+
+
+        recorder.ondataavailable =
+          event => {
+
+            if (
+              event.data &&
+              event.data.size > 0
+            ) {
+
+              chunks.push(
+                event.data
+              );
+
+            }
+
+          };
+
+
+        const finished =
+          new Promise(resolve => {
+
+            recorder.onstop =
+              resolve;
+
+          });
+
+
+        // --------------------------------
+        // SEEK TO START
+        // --------------------------------
+
+        await new Promise(
+          resolve => {
+
+            const seeked = () => {
+
+              video.removeEventListener(
+                "seeked",
+                seeked
+              );
+
+              resolve();
+
+            };
+
+
+            video.addEventListener(
+              "seeked",
+              seeked
+            );
+
+
+            video.currentTime =
+              0;
+
+          }
+        );
+
+
+        voiceAudio.currentTime =
+          0;
+
+
+        // --------------------------------
+        // START
+        // --------------------------------
+
+        await audioContext.resume();
+
+
+        recorder.start(200);
+
+
+        await video.play();
+
+
+        try {
+
+          await voiceAudio.play();
+
+        } catch (voicePlayError) {
+
+          console.warn(
+            "Voice playback warning:",
+            voicePlayError
+          );
+
+        }
+
+
+        if (voiceExportStatus) {
+
+          voiceExportStatus.textContent =
+            "Exporting video with your voice...";
+
+        }
+
+
+        // --------------------------------
+        // DRAW FRAMES
+        // --------------------------------
+
+        let drawing = true;
+
+
+        const drawFrame = () => {
+
+          if (!drawing) {
+            return;
+          }
+
+
+          if (
+            video.readyState >= 2
+          ) {
+
+            ctx.drawImage(
+              video,
+              0,
+              0,
+              canvas.width,
+              canvas.height
+            );
+
+          }
+
+
+          animationFrame =
+            requestAnimationFrame(
+              drawFrame
+            );
+
+        };
+
+
+        drawFrame();
+
+
+        // --------------------------------
+        // STOP AT VIDEO END
+        // --------------------------------
+
+        const stopExport =
+          () => {
+
+            if (
+              video.ended ||
+              video.currentTime >=
+                video.duration - 0.1
+            ) {
+
+              finishExport();
+
+            }
+
+          };
+
+
+        let exportFinished =
+          false;
+
+
+        const finishExport =
+          () => {
+
+            if (exportFinished) {
+              return;
+            }
+
+
+            exportFinished = true;
+
+
+            drawing = false;
+
+
+            video.pause();
+
+            voiceAudio.pause();
+
+
+            video.removeEventListener(
+              "timeupdate",
+              stopExport
+            );
+
+
+            if (animationFrame) {
+
+              cancelAnimationFrame(
+                animationFrame
+              );
+
+            }
+
+
+            if (
+              recorder &&
+              recorder.state !==
+                "inactive"
+            ) {
+
+              recorder.stop();
+
+            }
+
+          };
+
+
+        video.addEventListener(
+          "timeupdate",
+          stopExport
+        );
+
+
+        // Safety timeout
+        const safetyTimer =
+          setTimeout(
+            () => {
+
+              finishExport();
+
+            },
+            Math.max(
+              2000,
+              (video.duration * 1000) + 1500
+            )
+          );
+
+
+        await finished;
+
+
+        clearTimeout(
+          safetyTimer
+        );
+
+
+        // --------------------------------
+        // OUTPUT
+        // --------------------------------
+
+        const blob =
+          new Blob(
+            chunks,
+            {
+              type:
+                "video/webm"
+            }
+          );
+
+
+        if (blob.size === 0) {
+
+          throw new Error(
+            "Voice video export is empty."
+          );
+
+        }
+
+
+        const outputURL =
+          URL.createObjectURL(
+            blob
+          );
+
+
+        if (downloadVoiceVideo) {
+
+          downloadVoiceVideo.href =
+            outputURL;
+
+          downloadVoiceVideo.download =
+            "video-with-own-voice.webm";
+
+          downloadVoiceVideo.textContent =
+            "Download Video With Voice";
+
+          downloadVoiceVideo.style.display =
+            "inline-block";
+
+        }
+
+
+        if (voiceExportStatus) {
+
+          voiceExportStatus.textContent =
+            "✅ Video with your voice ready";
+
+        }
+
+
+      } catch (error) {
+
+        console.error(
+          "Voice video export error:",
+          error
+        );
+
+
+        if (voiceExportStatus) {
+
+          voiceExportStatus.textContent =
+            "❌ Voice export failed: " +
+            (
+              error.message ||
+              String(error)
+            );
+
+        }
+
+      } finally {
+
+        if (animationFrame) {
+
+          cancelAnimationFrame(
+            animationFrame
+          );
+
+        }
+
+
+        if (video) {
+
+          try {
+            video.pause();
+          } catch (e) {}
+
+        }
+
+
+        if (voiceAudio) {
+
+          try {
+            voiceAudio.pause();
+          } catch (e) {}
+
+        }
+
+
+        if (combinedStream) {
+
+          combinedStream
+            .getTracks()
+            .forEach(track => {
+
+              try {
+                track.stop();
+              } catch (e) {}
+
+            });
+
+        }
+
+
+        if (videoStream) {
+
+          videoStream
+            .getTracks()
+            .forEach(track => {
+
+              try {
+                track.stop();
+              } catch (e) {}
+
+            });
+
+        }
+
+
+        if (audioContext) {
+
+          try {
+
+            await audioContext.close();
+
+          } catch (e) {
+
+            console.log(e);
+
+          }
+
+        }
+
+
+        exportVoiceVideo.disabled =
+          false;
+
+        startVoiceRecording.disabled =
+          false;
+
+        stopVoiceRecording.disabled =
+          true;
+
+      }
+
+    }
+  );
+
+})();
