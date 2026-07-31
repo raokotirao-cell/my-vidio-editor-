@@ -7,29 +7,23 @@ const startTime = document.getElementById("startTime");
 const endTime = document.getElementById("endTime");
 
 if (exportMp4) {
+
   exportMp4.addEventListener("click", async () => {
 
     try {
 
       exportMp4.disabled = true;
-
-      if (downloadMp4) {
-        downloadMp4.style.display = "none";
-      }
-
-      mp4Status.textContent =
-        "Uploading video to Cloudinary...";
+      downloadMp4.style.display = "none";
 
       const file = videoInput.files[0];
 
       if (!file) {
-        throw new Error(
-          "Please select a video first."
-        );
+        throw new Error("Please select a video first.");
       }
 
       const start = Number(startTime.value);
       const end = Number(endTime.value);
+      const duration = end - start;
 
       if (
         !Number.isFinite(start) ||
@@ -37,46 +31,66 @@ if (exportMp4) {
         start < 0 ||
         end <= start
       ) {
-        throw new Error(
-          "Please enter valid Start and End times."
-        );
+        throw new Error("Please enter valid Start and End times.");
       }
+
+      mp4Status.textContent =
+        "Uploading video to Cloudinary...";
 
       const formData = new FormData();
 
-      formData.append("video", file);
-      formData.append("start", String(start));
-      formData.append("end", String(end));
+      formData.append("file", file);
+      formData.append(
+        "upload_preset",
+        "my_video_upload"
+      );
 
-      mp4Status.textContent =
-        "Converting video to MP4...";
-
-      const response = await fetch(
-        "/api/convert-mp4",
+      const uploadResponse = await fetch(
+        "https://api.cloudinary.com/v1_1/kdcgiald/video/upload",
         {
           method: "POST",
           body: formData
         }
       );
 
-      const data =
-        await response.json();
+      const uploadData =
+        await uploadResponse.json();
 
-      if (!response.ok) {
+      if (!uploadResponse.ok) {
         throw new Error(
-          data.error ||
-          "MP4 conversion failed."
+          uploadData.error?.message ||
+          "Cloudinary upload failed."
         );
       }
 
-      if (!data.url) {
-        throw new Error(
-          "MP4 URL was not returned."
-        );
-      }
+      const publicId =
+        uploadData.public_id;
+
+      const version =
+        uploadData.version;
+
+      mp4Status.textContent =
+        "Creating MP4...";
+
+
+      // Cloudinary video transformation
+      const transformation =
+        `so_${start},du_${duration}`;
+
+
+      const mp4Url =
+        `https://res.cloudinary.com/kdcgiald/video/upload/` +
+        `${transformation}/f_mp4/${publicId}.mp4`;
+
+
+      // Give Cloudinary a moment to generate
+      await new Promise(resolve =>
+        setTimeout(resolve, 1500)
+      );
+
 
       downloadMp4.href =
-        data.url;
+        mp4Url;
 
       downloadMp4.download =
         "trimmed-video.mp4";
@@ -86,6 +100,7 @@ if (exportMp4) {
 
       downloadMp4.style.display =
         "inline-block";
+
 
       mp4Status.textContent =
         "MP4 ready ✅";
@@ -108,5 +123,5 @@ if (exportMp4) {
     }
 
   });
+
 }
- 
