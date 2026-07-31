@@ -1668,7 +1668,8 @@ videoGain.gain.value =
 
   const selectedVideosStatus =
     document.getElementById("selectedVideosStatus");
-
+const clearSelectedVideos =
+  document.getElementById("clearSelectedVideos");
   const combineVideosButton =
     document.getElementById("combineVideosButton");
 
