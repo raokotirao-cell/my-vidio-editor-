@@ -2250,7 +2250,7 @@ await new Promise(
 video.pause();
           
                  
-
+}
               
         // --------------------------------
         // STOP DRAWING
