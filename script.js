@@ -2163,92 +2163,110 @@ videoGain.gain.value =
             video;
 
 
-          // --------------------------------
-          // PLAY VIDEO
-          // --------------------------------
-await new Promise(
-  async (resolve, reject) => {
+          // 
+// --------------------------------
+// PLAY VIDEO
+// --------------------------------
 
-    let finished = false;
+await video.play();
 
-    const finish = () => {
+await new Promise((resolve, reject) => {
 
-      if (finished) {
-        return;
-      }
+  let finished = false;
 
-      finished = true;
+  const finish = () => {
 
-      video.removeEventListener(
-        "timeupdate",
-        checkEnd
-      );
+    if (finished) {
+      return;
+    }
 
-      video.removeEventListener(
-        "ended",
-        finish
-      );
+    finished = true;
 
-      resolve();
+    clearInterval(checkTimer);
+    clearTimeout(forceTimer);
 
-    };
+    video.removeEventListener(
+      "ended",
+      finish
+    );
 
-    const checkEnd = () => {
+    video.removeEventListener(
+      "error",
+      handleError
+    );
+
+    resolve();
+
+  };
+
+
+  const handleError = () => {
+
+    if (finished) {
+      return;
+    }
+
+    finished = true;
+
+    clearInterval(checkTimer);
+    clearTimeout(forceTimer);
+
+    reject(
+      new Error(
+        "Playback failed for video " +
+        (i + 1)
+      )
+    );
+
+  };
+
+
+  const checkTimer =
+    setInterval(() => {
 
       if (
         Number.isFinite(video.duration) &&
         video.currentTime >=
-          video.duration - 0.15
+          video.duration - 0.2
       ) {
 
         finish();
 
       }
 
-    };
+    }, 100);
 
-    video.addEventListener(
-      "timeupdate",
-      checkEnd
-    );
 
-    video.addEventListener(
-      "ended",
-      finish
-    );
+  const forceTimer =
+    setTimeout(() => {
 
-    video.onerror = () => {
+      finish();
 
-      if (!finished) {
+    }, Math.max(
+      1000,
+      (video.duration * 1000) + 1500
+    ));
 
-        finished = true;
 
-        reject(
-          new Error(
-            "Playback failed for video " +
-            (i + 1)
-          )
-        );
+  video.addEventListener(
+    "ended",
+    finish
+  );
 
-      }
+  video.addEventListener(
+    "error",
+    handleError
+  );
 
-    };
-
-    try {
-
-      await video.play();
-
-    } catch (playError) {
-
-      reject(playError);
-
-    }
-
-  }
-);
+});
 
 video.pause();
-          
+
+      
+
+    
+
+
                  
 }
               
