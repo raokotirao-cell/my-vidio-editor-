@@ -2683,7 +2683,7 @@ if (chunks.length === 0) {
           voiceRecordingStatus.textContent =
             "Voice recorded ✅";
 
-
+exportVoiceVideo.disabled = false;
           if (microphoneStream) {
 
             microphoneStream
