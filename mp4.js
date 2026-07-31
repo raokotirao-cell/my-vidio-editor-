@@ -45,19 +45,21 @@ async function loadFFmpeg() {
     "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
 
   await ffmpeg.load({
-    coreURL:
-      await toBlobURL(
-        `${baseURL}/ffmpeg-core.js`,
-        "text/javascript"
-      ),
+  classWorkerURL:
+    "/ffmpeg/worker.js",
 
-    wasmURL:
-      await toBlobURL(
-        `${baseURL}/ffmpeg-core.wasm`,
-        "application/wasm"
-      )
-  });
+  coreURL:
+    await toBlobURL(
+      `${baseURL}/ffmpeg-core.js`,
+      "text/javascript"
+    ),
 
+  wasmURL:
+    await toBlobURL(
+      `${baseURL}/ffmpeg-core.wasm`,
+      "application/wasm"
+    )
+});
   ffmpegLoaded = true;
 
   mp4Status.textContent =
