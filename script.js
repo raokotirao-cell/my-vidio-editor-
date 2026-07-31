@@ -1657,3 +1657,777 @@ videoGain.gain.value =
   );
 
 })();
+// ============================================
+// COMBINE MULTIPLE VIDEOS - ISOLATED CODE
+// ============================================
+
+(() => {
+
+  const multiVideoInput =
+    document.getElementById("multiVideoInput");
+
+  const selectedVideosStatus =
+    document.getElementById("selectedVideosStatus");
+
+  const combineVideosButton =
+    document.getElementById("combineVideosButton");
+
+  const combineVideosStatus =
+    document.getElementById("combineVideosStatus");
+
+  const downloadCombinedVideos =
+    document.getElementById("downloadCombinedVideos");
+
+
+  if (!multiVideoInput || !combineVideosButton) {
+    return;
+  }
+
+
+  let selectedFiles = [];
+
+
+  // --------------------------------
+  // SELECT VIDEOS
+  // --------------------------------
+
+  multiVideoInput.addEventListener(
+    "change",
+    () => {
+
+      selectedFiles =
+        Array.from(
+          multiVideoInput.files || []
+        );
+
+
+      if (selectedFiles.length === 0) {
+
+        selectedVideosStatus.textContent =
+          "No videos selected.";
+
+        return;
+      }
+
+
+      selectedVideosStatus.textContent =
+        selectedFiles.length +
+        " video(s) selected ✅";
+
+    }
+  );
+
+
+  // --------------------------------
+  // COMBINE VIDEOS
+  // --------------------------------
+
+  combineVideosButton.addEventListener(
+    "click",
+    async () => {
+
+      let canvas = null;
+      let ctx = null;
+      let audioContext = null;
+      let destination = null;
+
+      let currentVideo = null;
+      let canvasStream = null;
+      let combinedStream = null;
+      let recorder = null;
+
+      let animationFrame = null;
+
+      const objectUrls = [];
+
+
+      try {
+
+        // --------------------------------
+        // CHECK FILES
+        // --------------------------------
+
+        if (selectedFiles.length < 2) {
+
+          alert(
+            "Please select at least 2 videos."
+          );
+
+          return;
+        }
+
+
+        // --------------------------------
+        // BUTTON STATE
+        // --------------------------------
+
+        combineVideosButton.disabled = true;
+
+        downloadCombinedVideos.style.display =
+          "none";
+
+
+        combineVideosStatus.textContent =
+          "Preparing videos...";
+
+
+        // --------------------------------
+        // LOAD FIRST VIDEO
+        // --------------------------------
+
+        currentVideo =
+          document.createElement("video");
+
+        currentVideo.playsInline = true;
+        currentVideo.preload = "auto";
+        currentVideo.muted = false;
+
+
+        const firstUrl =
+          URL.createObjectURL(
+            selectedFiles[0]
+          );
+
+        objectUrls.push(firstUrl);
+
+        currentVideo.src =
+          firstUrl;
+
+
+        await new Promise(
+          (resolve, reject) => {
+
+            currentVideo.onloadedmetadata =
+              resolve;
+
+            currentVideo.onerror =
+              () => {
+                reject(
+                  new Error(
+                    "Could not load the first video."
+                  )
+                );
+              };
+
+          }
+        );
+
+
+        // --------------------------------
+        // CANVAS
+        // --------------------------------
+
+        canvas =
+          document.createElement("canvas");
+
+
+        canvas.width =
+          currentVideo.videoWidth || 1280;
+
+        canvas.height =
+          currentVideo.videoHeight || 720;
+
+
+        ctx =
+          canvas.getContext("2d");
+
+
+        if (!ctx) {
+          throw new Error(
+            "Could not create canvas."
+          );
+        }
+
+
+        // --------------------------------
+        // AUDIO
+        // --------------------------------
+
+        const AudioContext =
+          window.AudioContext ||
+          window.webkitAudioContext;
+
+
+        if (!AudioContext) {
+          throw new Error(
+            "Audio recording is not supported."
+          );
+        }
+
+
+        audioContext =
+          new AudioContext();
+
+
+        destination =
+          audioContext.createMediaStreamDestination();
+
+
+        // --------------------------------
+        // VIDEO STREAM
+        // --------------------------------
+
+        canvasStream =
+          canvas.captureStream(30);
+
+
+        combinedStream =
+          new MediaStream();
+
+
+        canvasStream
+          .getVideoTracks()
+          .forEach(track => {
+
+            combinedStream.addTrack(track);
+
+          });
+
+
+        destination
+          .stream
+          .getAudioTracks()
+          .forEach(track => {
+
+            combinedStream.addTrack(track);
+
+          });
+
+
+        // --------------------------------
+        // MIME TYPE
+        // --------------------------------
+
+        let mimeType = "";
+
+
+        const formats = [
+
+          "video/webm;codecs=vp9,opus",
+
+          "video/webm;codecs=vp8,opus",
+
+          "video/webm"
+
+        ];
+
+
+        for (
+          const format of formats
+        ) {
+
+          if (
+            MediaRecorder.isTypeSupported(
+              format
+            )
+          ) {
+
+            mimeType = format;
+
+            break;
+
+          }
+
+        }
+
+
+        if (!mimeType) {
+
+          throw new Error(
+            "WebM recording is not supported."
+          );
+
+        }
+
+
+        // --------------------------------
+        // RECORDER
+        // --------------------------------
+
+        recorder =
+          new MediaRecorder(
+            combinedStream,
+            {
+              mimeType: mimeType
+            }
+          );
+
+
+        const chunks = [];
+
+
+        recorder.ondataavailable =
+          event => {
+
+            if (
+              event.data &&
+              event.data.size > 0
+            ) {
+
+              chunks.push(
+                event.data
+              );
+
+            }
+
+          };
+
+
+        const finished =
+          new Promise(resolve => {
+
+            recorder.onstop =
+              resolve;
+
+          });
+
+
+        // --------------------------------
+        // DRAW LOOP
+        // --------------------------------
+
+        let drawing = true;
+
+
+        const drawFrame = () => {
+
+          if (!drawing) {
+            return;
+          }
+
+
+          if (
+            currentVideo &&
+            currentVideo.readyState >= 2
+          ) {
+
+            ctx.drawImage(
+              currentVideo,
+              0,
+              0,
+              canvas.width,
+              canvas.height
+            );
+
+          }
+
+
+          animationFrame =
+            requestAnimationFrame(
+              drawFrame
+            );
+
+        };
+
+
+        drawFrame();
+
+
+        // --------------------------------
+        // START AUDIO
+        // --------------------------------
+
+        await audioContext.resume();
+
+
+        // --------------------------------
+        // START RECORDING
+        // --------------------------------
+
+        recorder.start(200);
+
+
+        // --------------------------------
+        // PLAY EACH VIDEO
+        // --------------------------------
+
+        for (
+          let i = 0;
+          i < selectedFiles.length;
+          i++
+        ) {
+
+          const file =
+            selectedFiles[i];
+
+
+          combineVideosStatus.textContent =
+            "Combining video " +
+            (i + 1) +
+            " of " +
+            selectedFiles.length +
+            "...";
+
+
+          // --------------------------------
+          // CREATE NEW VIDEO ELEMENT
+          // --------------------------------
+
+          const video =
+            document.createElement("video");
+
+
+          video.playsInline = true;
+          video.preload = "auto";
+          video.crossOrigin = "anonymous";
+
+
+          const url =
+            URL.createObjectURL(file);
+
+
+          objectUrls.push(url);
+
+
+          video.src =
+            url;
+
+
+          // --------------------------------
+          // LOAD VIDEO
+          // --------------------------------
+
+          await new Promise(
+            (resolve, reject) => {
+
+              video.onloadedmetadata =
+                resolve;
+
+              video.onerror =
+                () => {
+
+                  reject(
+                    new Error(
+                      "Could not load video " +
+                      (i + 1)
+                    )
+                  );
+
+                };
+
+            }
+          );
+
+
+          // --------------------------------
+          // KEEP ORIGINAL CANVAS SIZE
+          // --------------------------------
+
+          if (
+            video.videoWidth &&
+            video.videoHeight
+          ) {
+
+            // Keep first video's size
+            // so all videos fit into one output.
+
+          }
+
+
+          // --------------------------------
+          // CREATE AUDIO SOURCE
+          // --------------------------------
+
+          let audioSource = null;
+
+
+          try {
+
+            audioSource =
+              audioContext
+                .createMediaElementSource(
+                  video
+                );
+
+
+            audioSource.connect(
+              destination
+            );
+
+          } catch (audioError) {
+
+            console.warn(
+              "Audio unavailable for video " +
+              (i + 1),
+              audioError
+            );
+
+          }
+
+
+          // --------------------------------
+          // SWITCH CURRENT VIDEO
+          // --------------------------------
+
+          currentVideo =
+            video;
+
+
+          // --------------------------------
+          // PLAY VIDEO
+          // --------------------------------
+
+          await new Promise(
+            async (resolve, reject) => {
+
+              const cleanup = () => {
+
+                video.onended = null;
+                video.onerror = null;
+
+              };
+
+
+              video.onended = () => {
+
+                cleanup();
+
+                resolve();
+
+              };
+
+
+              video.onerror = () => {
+
+                cleanup();
+
+                reject(
+                  new Error(
+                    "Playback failed for video " +
+                    (i + 1)
+                  )
+                );
+
+              };
+
+
+              try {
+
+                await video.play();
+
+              } catch (playError) {
+
+                cleanup();
+
+                reject(
+                  playError
+                );
+
+              }
+
+            }
+          );
+
+
+          video.pause();
+
+
+          // Stop this video's audio source
+          if (audioSource) {
+
+            try {
+
+              audioSource.disconnect();
+
+            } catch (e) {
+
+              console.log(e);
+
+            }
+
+          }
+
+        }
+
+
+        // --------------------------------
+        // STOP DRAWING
+        // --------------------------------
+
+        drawing = false;
+
+
+        if (animationFrame) {
+
+          cancelAnimationFrame(
+            animationFrame
+          );
+
+        }
+
+
+        // --------------------------------
+        // STOP RECORDING
+        // --------------------------------
+
+        if (
+          recorder.state !== "inactive"
+        ) {
+
+          recorder.stop();
+
+        }
+
+
+        await finished;
+
+
+        // --------------------------------
+        // CREATE OUTPUT
+        // --------------------------------
+
+        const blob =
+          new Blob(
+            chunks,
+            {
+              type: "video/webm"
+            }
+          );
+
+
+        if (blob.size === 0) {
+
+          throw new Error(
+            "Combined video is empty."
+          );
+
+        }
+
+
+        const outputUrl =
+          URL.createObjectURL(
+            blob
+          );
+
+
+        // --------------------------------
+        // DOWNLOAD LINK
+        // --------------------------------
+
+        downloadCombinedVideos.href =
+          outputUrl;
+
+
+        downloadCombinedVideos.download =
+          "combined-videos.webm";
+
+
+        downloadCombinedVideos.textContent =
+          "Download Combined Video";
+
+
+        downloadCombinedVideos.style.display =
+          "inline-block";
+
+
+        combineVideosStatus.textContent =
+          "Combined " +
+          selectedFiles.length +
+          " videos successfully ✅";
+
+
+      } catch (error) {
+
+        console.error(
+          "Multiple video combine error:",
+          error
+        );
+
+
+        combineVideosStatus.textContent =
+          "❌ Combine failed: " +
+          (
+            error.message ||
+            String(error)
+          );
+
+
+      } finally {
+
+        // --------------------------------
+        // CLEANUP
+        // --------------------------------
+
+        if (animationFrame) {
+
+          cancelAnimationFrame(
+            animationFrame
+          );
+
+        }
+
+
+        if (currentVideo) {
+
+          try {
+            currentVideo.pause();
+          } catch (e) {}
+
+        }
+
+
+        if (combinedStream) {
+
+          combinedStream
+            .getTracks()
+            .forEach(track => {
+
+              try {
+                track.stop();
+              } catch (e) {}
+
+            });
+
+        }
+
+
+        if (canvasStream) {
+
+          canvasStream
+            .getTracks()
+            .forEach(track => {
+
+              try {
+                track.stop();
+              } catch (e) {}
+
+            });
+
+        }
+
+
+        if (audioContext) {
+
+          try {
+
+            await audioContext.close();
+
+          } catch (e) {
+
+            console.log(e);
+
+          }
+
+        }
+
+
+        objectUrls.forEach(url => {
+
+          try {
+
+            URL.revokeObjectURL(url);
+
+          } catch (e) {}
+
+        });
+
+
+        combineVideosButton.disabled =
+          false;
+
+      }
+
+    }
+  );
+
+})();
