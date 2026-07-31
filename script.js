@@ -416,7 +416,77 @@ const stopMusic =
 
   }
 
+// --------------------------------------------
+// MUSIC PREVIEW
+// --------------------------------------------
 
+let previewAudio = null;
+
+if (previewMusic) {
+
+  previewMusic.addEventListener(
+    "click",
+    () => {
+
+      if (!selectedMusic || !musicURL) {
+        alert("Please select music first.");
+        return;
+      }
+
+      if (previewAudio) {
+        previewAudio.pause();
+        previewAudio.currentTime = 0;
+      }
+
+      previewAudio =
+        new Audio(musicURL);
+
+      previewAudio.volume =
+        Number(
+          musicVolume
+            ? musicVolume.value
+            : 0.5
+        );
+
+      previewAudio.play();
+
+      if (musicStatus) {
+        musicStatus.textContent =
+          "▶ Playing music preview...";
+      }
+
+    }
+  );
+
+}
+
+
+// --------------------------------------------
+// STOP MUSIC PREVIEW
+// --------------------------------------------
+
+if (stopMusic) {
+
+  stopMusic.addEventListener(
+    "click",
+    () => {
+
+      if (previewAudio) {
+
+        previewAudio.pause();
+        previewAudio.currentTime = 0;
+
+      }
+
+      if (musicStatus) {
+        musicStatus.textContent =
+          "Music preview stopped.";
+      }
+
+    }
+  );
+
+}
   // Volume
   if (musicVolume) {
 
