@@ -329,7 +329,22 @@
   <p id="voiceRecordingStatus">
     No voice recorded.
   </p>
+<label for="voiceVolume">
+  Own Voice Volume
+</label>
 
+<input
+  type="range"
+  id="voiceVolume"
+  min="0"
+  max="2"
+  step="0.1"
+  value="1"
+>
+
+<span id="voiceVolumeValue">
+  100%
+</span>
   <button
     id="exportVoiceVideo"
     type="button"
