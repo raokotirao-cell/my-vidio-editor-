@@ -3000,7 +3000,8 @@ videoGain.gain.value = 0;
 
 videoSource.connect(videoGain);
 videoGain.connect(destination);
-    
+
+    })();
 
         // --------------------------------
         // STREAM
