@@ -27,7 +27,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
       alert(
         "FFMPEG ERROR:\n\n" +
-        (error.message || String(error))
+        error.message +
+        "\n\nSTACK:\n" +
+        error.stack
       );
 
     }
