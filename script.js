@@ -3887,6 +3887,38 @@ async function loadFFmpeg() {
 
     studioElements.forEach(element => {
       element.style.display = "";
+// ============================================
+// LOGOUT BUTTON
+// ============================================
+
+const logoutButton = document.createElement("button");
+
+logoutButton.id = "logoutButton";
+logoutButton.type = "button";
+logoutButton.textContent = "Logout";
+
+logoutButton.style.position = "fixed";
+logoutButton.style.top = "10px";
+logoutButton.style.right = "10px";
+logoutButton.style.zIndex = "9999";
+logoutButton.style.padding = "10px 16px";
+
+document.body.appendChild(logoutButton);
+
+logoutButton.style.display =
+  sessionStorage.getItem("videoStudioLoggedIn") === "true"
+    ? "block"
+    : "none";
+
+logoutButton.addEventListener("click", () => {
+
+  sessionStorage.removeItem(
+    "videoStudioLoggedIn"
+  );
+
+  location.reload();
+
+});
     });
 
   }
