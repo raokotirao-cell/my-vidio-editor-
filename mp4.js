@@ -23,95 +23,43 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const ffmpeg = new FFmpeg();
 
-      const coreBase =
+      status.textContent =
+        "STEP 3 - Preparing FFmpeg core...";
+
+      const baseURL =
         "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
 
-      const ffmpegBase =
-        "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm";
-
-      status.textContent =
-        "STEP 3 - Preparing Worker...";
-
-      /* =========================
-         FFmpeg CLASS WORKER
-      ========================== */
-
-      const workerResponse =
-        await fetch(`${ffmpegBase}/worker.js`);
-
-      if (!workerResponse.ok) {
-        throw new Error(
-          "FFmpeg worker.js download failed: " +
-          workerResponse.status
-        );
-      }
-
-      let workerCode =
-        await workerResponse.text();
-
-      workerCode = workerCode
-        .replaceAll(
-          'from "./const.js"',
-          `from "${ffmpegBase}/const.js"`
-        )
-        .replaceAll(
-          'from "./errors.js"',
-          `from "${ffmpegBase}/errors.js"`
-        );
-
-      const workerBlob =
-        new Blob(
-          [workerCode],
-          { type: "text/javascript" }
-        );
-
-      const classWorkerURL =
-        URL.createObjectURL(workerBlob);
-
-      /* =========================
-         FFMPEG CORE FILES
-      ========================== */
-
       const coreURL = await toBlobURL(
-        `${coreBase}/ffmpeg-core.js`,
+        `${baseURL}/ffmpeg-core.js`,
         "text/javascript"
       );
 
       const wasmURL = await toBlobURL(
-        `${coreBase}/ffmpeg-core.wasm`,
+        `${baseURL}/ffmpeg-core.wasm`,
         "application/wasm"
-      );
-
-      const workerURL = await toBlobURL(
-        `${coreBase}/ffmpeg-core.worker.js`,
-        "text/javascript"
       );
 
       status.textContent =
         "STEP 4 - Loading FFmpeg...";
 
       await ffmpeg.load({
-        classWorkerURL,
         coreURL,
-        wasmURL,
-        workerURL
+        wasmURL
       });
 
       status.textContent =
         "STEP 5 - FFMPEG LOADED ✅";
 
-      URL.revokeObjectURL(classWorkerURL);
-
     } catch (error) {
+
+      console.error(
+        "FFMPEG ERROR:",
+        error
+      );
 
       status.textContent =
         "FFMPEG ERROR: " +
-        (error.message || String(error));
-
-      console.error(
-        "FFMPEG LOAD ERROR:",
-        error
-      );
+        (error?.message || String(error));
 
     }
 
