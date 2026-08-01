@@ -4147,3 +4147,21 @@ async function loadFFmpeg() {
 
 })();
   
+console.log("Supabase library test:", typeof supabase);
+// ============================================
+// SUPABASE CONNECTION
+// ============================================
+
+const SUPABASE_URL = " https://supabase.com/dashboard/project/fewufpkkxyruyqzxfoko/auth/providers ";
+const SUPABASE_KEY = " sb_publishable_ClSTH3208cNQ7JYVfeYDcA_lhVoRujw ";
+
+const supabaseClient =
+  supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+  );
+
+console.log(
+  "Supabase connected:",
+  !!supabaseClient
+);
