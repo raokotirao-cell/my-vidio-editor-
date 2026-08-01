@@ -1,4 +1,4 @@
-const exportMp4 = document.getElementById("exportMp4");
+const exportMp4 = document.getElementById("convertToMp4");
 const mp4Status = document.getElementById("mp4Status");
 const downloadMp4 = document.getElementById("downloadMp4");
 
