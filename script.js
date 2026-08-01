@@ -3747,179 +3747,400 @@ async function loadFFmpeg() {
 }
 
 // ============================================
-// SIMPLE LOGIN - TEMPORARY
+// SIGNUP + LOGIN
 // ============================================
 
 (() => {
 
+  const studioElements =
+    Array.from(document.body.children);
+
   // Create login screen
-  const loginScreen = document.createElement("div");
+  const authScreen =
+    document.createElement("div");
 
-  loginScreen.id = "loginScreen";
+  authScreen.id = "authScreen";
 
-  loginScreen.innerHTML = `
+  authScreen.innerHTML = `
     <div style="
-      max-width:350px;
-      margin:80px auto;
+      max-width:360px;
+      margin:60px auto;
       padding:25px;
       text-align:center;
       border:1px solid #ccc;
       border-radius:12px;
-      background:white;
+      background:#fff;
     ">
 
-      <h2>Login</h2>
+      <h2 id="authTitle">Create Account</h2>
 
       <input
         type="text"
-        id="loginUsername"
+        id="authUsername"
         placeholder="Username"
+        autocomplete="username"
         style="
           width:90%;
           padding:12px;
           margin:8px;
+          box-sizing:border-box;
         "
       >
 
       <input
         type="password"
-        id="loginPassword"
+        id="authPassword"
         placeholder="Password"
+        autocomplete="new-password"
         style="
           width:90%;
           padding:12px;
           margin:8px;
+          box-sizing:border-box;
+        "
+      >
+
+      <input
+        type="password"
+        id="authConfirmPassword"
+        placeholder="Confirm Password"
+        autocomplete="new-password"
+        style="
+          width:90%;
+          padding:12px;
+          margin:8px;
+          box-sizing:border-box;
         "
       >
 
       <button
-        id="loginButton"
+        id="authButton"
         type="button"
         style="
           padding:12px 25px;
           margin:10px;
         "
       >
-        Login
+        Sign Up
       </button>
 
-      <p id="loginStatus"></p>
+      <p id="authStatus"></p>
+
+      <button
+        id="switchAuth"
+        type="button"
+        style="
+          border:none;
+          background:none;
+          text-decoration:underline;
+          cursor:pointer;
+        "
+      >
+        Already have an account? Login
+      </button>
 
     </div>
   `;
 
-  // Save existing Studio content
-  const studioElements =
-    Array.from(document.body.children);
+  document.body.appendChild(authScreen);
 
-  // Add login screen
-  document.body.appendChild(loginScreen);
-
-  // Hide existing Studio
+  // Hide Video Studio initially
   studioElements.forEach(element => {
     element.style.display = "none";
   });
 
-  // Login button
-  const loginButton =
-    document.getElementById("loginButton");
+  const authTitle =
+    document.getElementById("authTitle");
 
-  const usernameInput =
-    document.getElementById("loginUsername");
+  const authUsername =
+    document.getElementById("authUsername");
 
-  const passwordInput =
-    document.getElementById("loginPassword");
+  const authPassword =
+    document.getElementById("authPassword");
 
-  const loginStatus =
-    document.getElementById("loginStatus");
+  const authConfirmPassword =
+    document.getElementById("authConfirmPassword");
+
+  const authButton =
+    document.getElementById("authButton");
+
+  const authStatus =
+    document.getElementById("authStatus");
+
+  const switchAuth =
+    document.getElementById("switchAuth");
 
 
-  loginButton.addEventListener("click", () => {
+  let signupMode = true;
 
-    const username =
-      usernameInput.value.trim();
 
-    const password =
-      passwordInput.value;
+  // --------------------------------------------
+  // SWITCH SIGNUP / LOGIN
+  // --------------------------------------------
 
-    // TEMPORARY LOGIN
-    if (
-      username === "admin" &&
-      password === "1234"
-    ) {
+  switchAuth.addEventListener(
+    "click",
+    () => {
 
-      // Save login
-      sessionStorage.setItem(
-        "videoStudioLoggedIn",
-        "true"
-      );
+      signupMode = !signupMode;
 
-      // Hide login
-      loginScreen.style.display = "none";
-logoutButton.style.display = "block";
+      authStatus.textContent = "";
+      authUsername.value = "";
+      authPassword.value = "";
+      authConfirmPassword.value = "";
 
-      // Show Studio
-      studioElements.forEach(element => {
-        element.style.display = "";
-      });
+      if (signupMode) {
 
-      console.log("Login successful ✅");
+        authTitle.textContent =
+          "Create Account";
 
-    } else {
+        authButton.textContent =
+          "Sign Up";
 
-      loginStatus.textContent =
-        "❌ Invalid username or password";
+        authConfirmPassword.style.display =
+          "block";
 
-      loginStatus.style.color = "red";
+        switchAuth.textContent =
+          "Already have an account? Login";
+
+      } else {
+
+        authTitle.textContent =
+          "Login";
+
+        authButton.textContent =
+          "Login";
+
+        authConfirmPassword.style.display =
+          "none";
+
+        switchAuth.textContent =
+          "Don't have an account? Sign Up";
+
+      }
 
     }
+  );
 
-  });
+
+  // --------------------------------------------
+  // SIGNUP / LOGIN BUTTON
+  // --------------------------------------------
+
+  authButton.addEventListener(
+    "click",
+    () => {
+
+      const username =
+        authUsername.value.trim();
+
+      const password =
+        authPassword.value;
+
+      const confirmPassword =
+        authConfirmPassword.value;
 
 
-  // Auto login during same browser session
+      if (!username || !password) {
+
+        authStatus.textContent =
+          "Please enter username and password.";
+
+        authStatus.style.color =
+          "red";
+
+        return;
+
+      }
+
+
+      if (signupMode) {
+
+        // ----------------------------
+        // SIGNUP
+        // ----------------------------
+
+        if (password.length < 4) {
+
+          authStatus.textContent =
+            "Password must be at least 4 characters.";
+
+          authStatus.style.color =
+            "red";
+
+          return;
+
+        }
+
+
+        if (password !== confirmPassword) {
+
+          authStatus.textContent =
+            "Passwords do not match.";
+
+          authStatus.style.color =
+            "red";
+
+          return;
+
+        }
+
+
+        const existingUser =
+          localStorage.getItem(
+            "videoStudioUser"
+          );
+
+
+        if (existingUser) {
+
+          const user =
+            JSON.parse(existingUser);
+
+          if (
+            user.username === username
+          ) {
+
+            authStatus.textContent =
+              "Username already exists.";
+
+            authStatus.style.color =
+              "red";
+
+            return;
+
+          }
+
+        }
+
+
+        const user = {
+          username: username,
+          password: password
+        };
+
+
+        localStorage.setItem(
+          "videoStudioUser",
+          JSON.stringify(user)
+        );
+
+
+        authStatus.textContent =
+          "Account created successfully ✅";
+
+        authStatus.style.color =
+          "green";
+
+
+        // Switch to login
+        setTimeout(() => {
+
+          signupMode = false;
+
+          authTitle.textContent =
+            "Login";
+
+          authButton.textContent =
+            "Login";
+
+          authConfirmPassword.style.display =
+            "none";
+
+          switchAuth.textContent =
+            "Don't have an account? Sign Up";
+
+          authPassword.value = "";
+          authConfirmPassword.value = "";
+
+        }, 800);
+
+
+      } else {
+
+        // ----------------------------
+        // LOGIN
+        // ----------------------------
+
+        const savedUser =
+          localStorage.getItem(
+            "videoStudioUser"
+          );
+
+
+        if (!savedUser) {
+
+          authStatus.textContent =
+            "No account found. Please Sign Up first.";
+
+          authStatus.style.color =
+            "red";
+
+          return;
+
+        }
+
+
+        const user =
+          JSON.parse(savedUser);
+
+
+        if (
+          user.username === username &&
+          user.password === password
+        ) {
+
+          sessionStorage.setItem(
+            "videoStudioLoggedIn",
+            "true"
+          );
+
+
+          authScreen.style.display =
+            "none";
+
+
+          studioElements.forEach(element => {
+            element.style.display = "";
+          });
+
+
+          console.log(
+            "Login successful ✅"
+          );
+
+
+        } else {
+
+          authStatus.textContent =
+            "❌ Incorrect username or password.";
+
+          authStatus.style.color =
+            "red";
+
+        }
+
+      }
+
+    }
+  );
+
+
+  // --------------------------------------------
+  // AUTO LOGIN
+  // --------------------------------------------
+
   if (
     sessionStorage.getItem(
       "videoStudioLoggedIn"
     ) === "true"
   ) {
 
-    loginScreen.style.display = "none";
-logoutButton.style.display = "block";
+    authScreen.style.display =
+      "none";
+
     studioElements.forEach(element => {
       element.style.display = "";
-// ============================================
-// LOGOUT BUTTON
-// ============================================
-
-const logoutButton = document.createElement("button");
-
-logoutButton.id = "logoutButton";
-logoutButton.type = "button";
-logoutButton.textContent = "Logout";
-
-logoutButton.style.position = "fixed";
-logoutButton.style.top = "10px";
-logoutButton.style.right = "10px";
-logoutButton.style.zIndex = "9999";
-logoutButton.style.padding = "10px 16px";
-
-document.body.appendChild(logoutButton);
-
-logoutButton.style.display =
-  sessionStorage.getItem("videoStudioLoggedIn") === "true"
-    ? "block"
-    : "none";
-
-logoutButton.addEventListener("click", () => {
-
-  sessionStorage.removeItem(
-    "videoStudioLoggedIn"
-  );
-
-  location.reload();
-
-});
     });
 
   }
