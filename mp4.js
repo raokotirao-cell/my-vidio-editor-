@@ -2,37 +2,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const button = document.getElementById("convertToMp4");
 
-  if (!button) {
-    alert("BUTTON NOT FOUND");
-    return;
-  }
-
   button.onclick = async () => {
 
-    alert("START FFmpeg TEST");
+    alert("STEP 1");
 
     try {
+      const module = await import(
+        "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js"
+      );
 
-      const module = await import("./ffmpeg/index.js");
+      alert("STEP 2 - FFMPEG MODULE LOADED");
 
-      alert("FFmpeg INDEX LOADED");
+      const ffmpeg = new module.FFmpeg();
 
-      const FFmpeg = module.FFmpeg;
-
-      if (!FFmpeg) {
-        throw new Error("FFmpeg class not found");
-      }
-
-      alert("FFmpeg CLASS FOUND");
-
-      const ffmpeg = new FFmpeg();
-
-      alert("FFmpeg CONSTRUCTOR OK");
+      alert("STEP 3 - CONSTRUCTOR OK");
 
     } catch (error) {
 
       alert(
-        "FFmpeg ERROR\n\n" +
+        "ERROR:\n\n" +
         error.message +
         "\n\n" +
         error.stack
