@@ -1,10 +1,14 @@
 // ======================================
 // MP4 EXPERIMENT
 // ======================================
+
+alert("LOCAL MP4 MODULE LOADED");
+
 import { FFmpeg } from "./ffmpeg/index.js";
 
 const ffmpeg = new FFmpeg();
 let ffmpegLoaded = false;
+
 (() => {
 
 const convertButton =
