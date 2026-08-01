@@ -3746,5 +3746,150 @@ async function loadFFmpeg() {
   console.log("FFmpeg ready");
 }
 
+// ============================================
+// SIMPLE LOGIN - TEMPORARY
+// ============================================
 
+(() => {
+
+  // Create login screen
+  const loginScreen = document.createElement("div");
+
+  loginScreen.id = "loginScreen";
+
+  loginScreen.innerHTML = `
+    <div style="
+      max-width:350px;
+      margin:80px auto;
+      padding:25px;
+      text-align:center;
+      border:1px solid #ccc;
+      border-radius:12px;
+      background:white;
+    ">
+
+      <h2>Login</h2>
+
+      <input
+        type="text"
+        id="loginUsername"
+        placeholder="Username"
+        style="
+          width:90%;
+          padding:12px;
+          margin:8px;
+        "
+      >
+
+      <input
+        type="password"
+        id="loginPassword"
+        placeholder="Password"
+        style="
+          width:90%;
+          padding:12px;
+          margin:8px;
+        "
+      >
+
+      <button
+        id="loginButton"
+        type="button"
+        style="
+          padding:12px 25px;
+          margin:10px;
+        "
+      >
+        Login
+      </button>
+
+      <p id="loginStatus"></p>
+
+    </div>
+  `;
+
+  // Save existing Studio content
+  const studioElements =
+    Array.from(document.body.children);
+
+  // Add login screen
+  document.body.appendChild(loginScreen);
+
+  // Hide existing Studio
+  studioElements.forEach(element => {
+    element.style.display = "none";
+  });
+
+  // Login button
+  const loginButton =
+    document.getElementById("loginButton");
+
+  const usernameInput =
+    document.getElementById("loginUsername");
+
+  const passwordInput =
+    document.getElementById("loginPassword");
+
+  const loginStatus =
+    document.getElementById("loginStatus");
+
+
+  loginButton.addEventListener("click", () => {
+
+    const username =
+      usernameInput.value.trim();
+
+    const password =
+      passwordInput.value;
+
+    // TEMPORARY LOGIN
+    if (
+      username === "admin" &&
+      password === "1234"
+    ) {
+
+      // Save login
+      sessionStorage.setItem(
+        "videoStudioLoggedIn",
+        "true"
+      );
+
+      // Hide login
+      loginScreen.style.display = "none";
+
+      // Show Studio
+      studioElements.forEach(element => {
+        element.style.display = "";
+      });
+
+      console.log("Login successful ✅");
+
+    } else {
+
+      loginStatus.textContent =
+        "❌ Invalid username or password";
+
+      loginStatus.style.color = "red";
+
+    }
+
+  });
+
+
+  // Auto login during same browser session
+  if (
+    sessionStorage.getItem(
+      "videoStudioLoggedIn"
+    ) === "true"
+  ) {
+
+    loginScreen.style.display = "none";
+
+    studioElements.forEach(element => {
+      element.style.display = "";
+    });
+
+  }
+
+})();
   
