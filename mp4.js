@@ -32,10 +32,45 @@ document.addEventListener("DOMContentLoaded", () => {
       status.textContent =
         "STEP 3 - Preparing Worker...";
 
-      const classWorkerURL = await toBlobURL(
-        `${ffmpegBase}/worker.js`,
-        "text/javascript"
-      );
+      /* =========================
+         FFmpeg CLASS WORKER
+      ========================== */
+
+      const workerResponse =
+        await fetch(`${ffmpegBase}/worker.js`);
+
+      if (!workerResponse.ok) {
+        throw new Error(
+          "FFmpeg worker.js download failed: " +
+          workerResponse.status
+        );
+      }
+
+      let workerCode =
+        await workerResponse.text();
+
+      workerCode = workerCode
+        .replaceAll(
+          'from "./const.js"',
+          `from "${ffmpegBase}/const.js"`
+        )
+        .replaceAll(
+          'from "./errors.js"',
+          `from "${ffmpegBase}/errors.js"`
+        );
+
+      const workerBlob =
+        new Blob(
+          [workerCode],
+          { type: "text/javascript" }
+        );
+
+      const classWorkerURL =
+        URL.createObjectURL(workerBlob);
+
+      /* =========================
+         FFMPEG CORE FILES
+      ========================== */
 
       const coreURL = await toBlobURL(
         `${coreBase}/ffmpeg-core.js`,
@@ -65,13 +100,18 @@ document.addEventListener("DOMContentLoaded", () => {
       status.textContent =
         "STEP 5 - FFMPEG LOADED ✅";
 
+      URL.revokeObjectURL(classWorkerURL);
+
     } catch (error) {
 
       status.textContent =
         "FFMPEG ERROR: " +
         (error.message || String(error));
 
-      console.error(error);
+      console.error(
+        "FFMPEG LOAD ERROR:",
+        error
+      );
 
     }
 
