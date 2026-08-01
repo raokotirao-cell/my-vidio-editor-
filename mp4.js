@@ -1,68 +1,79 @@
 document.addEventListener("DOMContentLoaded", () => {
 
-  const button = document.getElementById("convertToMp4");
-  const status = document.getElementById("mp4Status");
+const button = document.getElementById("convertToMp4");
+const status = document.getElementById("mp4Status");
 
-  button.onclick = async () => {
+if (!button || !status) {
+console.error("MP4 button or status not found.");
+return;
+}
 
-    try {
+button.onclick = async () => {
 
-      status.textContent =
-        "STEP 1 - Loading FFmpeg module...";
+```
+try {
 
-      const { FFmpeg } = await import(
-        "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js"
-      );
+  status.textContent =
+    "STEP 1 - Loading FFmpeg module...";
 
-      const { toBlobURL } = await import(
-        "https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js"
-      );
+  const { FFmpeg } = await import(
+    "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js"
+  );
 
-      status.textContent =
-        "STEP 2 - Creating FFmpeg...";
+  const { toBlobURL } = await import(
+    "https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js"
+  );
 
-      const ffmpeg = new FFmpeg();
+  status.textContent =
+    "STEP 2 - Creating FFmpeg...";
 
-      status.textContent =
-        "STEP 3 - Preparing FFmpeg core...";
+  const ffmpeg = new FFmpeg();
 
-      const baseURL =
-        "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm";
+  status.textContent =
+    "STEP 3 - Preparing local Worker...";
 
-      const coreURL = await toBlobURL(
-        `${baseURL}/ffmpeg-core.js`,
-        "text/javascript"
-      );
+  const classWorkerURL =
+    window.location.origin +
+    "/ffmpeg/worker.js";
 
-      const wasmURL = await toBlobURL(
-        `${baseURL}/ffmpeg-core.wasm`,
-        "application/wasm"
-      );
+  const coreURL = await toBlobURL(
+    window.location.origin +
+    "/ffmpeg/ffmpeg-core.js",
+    "text/javascript"
+  );
 
-      status.textContent =
-        "STEP 4 - Loading FFmpeg...";
+  const wasmURL = await toBlobURL(
+    window.location.origin +
+    "/ffmpeg/ffmpeg-core.wasm",
+    "application/wasm"
+  );
 
-      await ffmpeg.load({
-        coreURL,
-        wasmURL
-      });
+  status.textContent =
+    "STEP 4 - Loading FFmpeg...";
 
-      status.textContent =
-        "STEP 5 - FFMPEG LOADED ✅";
+  await ffmpeg.load({
+    classWorkerURL,
+    coreURL,
+    wasmURL
+  });
 
-    } catch (error) {
+  status.textContent =
+    "STEP 5 - FFMPEG LOADED ✅";
 
-      console.error(
-        "FFMPEG ERROR:",
-        error
-      );
+} catch (error) {
 
-      status.textContent =
-        "FFMPEG ERROR: " +
-        (error?.message || String(error));
+  console.error(
+    "FFMPEG ERROR:",
+    error
+  );
 
-    }
+  status.textContent =
+    "FFMPEG ERROR: " +
+    (error?.message || String(error));
 
-  };
+}
+```
+
+};
 
 });
