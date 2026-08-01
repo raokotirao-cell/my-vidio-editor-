@@ -1,40 +1,64 @@
 document.addEventListener("DOMContentLoaded", () => {
 
   const button = document.getElementById("convertToMp4");
+  const status = document.getElementById("mp4Status");
 
   button.onclick = async () => {
 
-    alert("STEP 1");
-
     try {
 
-      const module = await import(
+      status.textContent = "STEP 1 - Loading FFmpeg module...";
+
+      const { FFmpeg } = await import(
         "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js"
       );
 
-      alert("STEP 2 - MODULE LOADED");
+      const { toBlobURL } = await import(
+        "https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js"
+      );
 
-      const ffmpeg = new module.FFmpeg();
+      status.textContent = "STEP 2 - Creating FFmpeg...";
 
-      alert("STEP 3 - CONSTRUCTOR OK");
+      const ffmpeg = new FFmpeg();
 
-      alert("STEP 4 - LOADING FFMPEG...");
+      const baseURL =
+        "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
+
+      status.textContent = "STEP 3 - Preparing FFmpeg files...";
+
+      const coreURL = await toBlobURL(
+        `${baseURL}/ffmpeg-core.js`,
+        "text/javascript"
+      );
+
+      const wasmURL = await toBlobURL(
+        `${baseURL}/ffmpeg-core.wasm`,
+        "application/wasm"
+      );
+
+      const workerURL = await toBlobURL(
+        `${baseURL}/ffmpeg-core.worker.js`,
+        "text/javascript"
+      );
+
+      status.textContent = "STEP 4 - Loading FFmpeg...";
 
       await ffmpeg.load({
-  coreURL:
-    "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm/ffmpeg-core.js"
-});
+        coreURL,
+        wasmURL,
+        workerURL
+      });
 
-      alert("STEP 5 - FFMPEG LOADED ✅");
+      status.textContent =
+        "STEP 5 - FFMPEG LOADED ✅";
 
     } catch (error) {
 
-      alert(
-        "FFMPEG LOAD ERROR:\n\n" +
-        error.message +
-        "\n\n" +
-        error.stack
-      );
+      status.textContent =
+        "FFMPEG ERROR: " +
+        (error.message || String(error));
+
+      console.error(error);
 
     }
 
