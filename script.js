@@ -13,7 +13,7 @@ const supabaseClient = supabase.createClient(
   SUPABASE_ANON_KEY
 );
 
-alert("SUPABASE CONNECTED");
+
 
 const authSection = document.getElementById("authSection");
 const authEmail = document.getElementById("authEmail");
