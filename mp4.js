@@ -21,9 +21,9 @@ document.addEventListener("DOMContentLoaded", () => {
       alert("STEP 4 - LOADING FFMPEG...");
 
       await ffmpeg.load({
-        coreURL:
-          "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd/ffmpeg-core.js"
-      });
+  coreURL:
+    "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm/ffmpeg-core.js"
+});
 
       alert("STEP 5 - FFMPEG LOADED ✅");
 
