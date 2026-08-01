@@ -3745,5 +3745,6 @@ async function loadFFmpeg() {
 
   console.log("FFmpeg ready");
 }
+})();
 
   
