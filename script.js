@@ -4,9 +4,9 @@ const addVideo = document.getElementById("addVideo");
 // ============================================
 // SUPABASE LOGIN / SIGNUP
 // ============================================
+const SUPABASE_URL = "https://fewufpkkxyruyqzxfoko.supabase.co";
 
-const SUPABASE_URL = " https://supabase.com/dashboard/project/fewufpkkxyruyqzxfoko/settings/api-keys ";
-const SUPABASE_ANON_KEY = " sb_publishable_ClSTH3208cNQ7JYVfeYDcA_lhVoRujw ";
+const SUPABASE_ANON_KEY = "sb_publishable_ClSTH3208cNQ7JYVfeYDcA_lhVoRujw";
 
 const supabaseClient = supabase.createClient(
   SUPABASE_URL,
