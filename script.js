@@ -1,14 +1,206 @@
 const videoInput = document.getElementById("videoInput");
 const videoPreview = document.getElementById("videoPreview");
 const addVideo = document.getElementById("addVideo");
-// SUPABASE LOGIN / SIGNUP CODE
-// ← ikkada complete login code
+// ============================================
+// SUPABASE LOGIN / SIGNUP
+// ============================================
 
-const videoInput = document.getElementById("videoInput");
-const videoPreview = document.getElementById("videoPreview");
-const addVideo = document.getElementById("addVideo");
+const SUPABASE_URL = " https://supabase.com/dashboard/project/fewufpkkxyruyqzxfoko/settings/api-keys ";
+const SUPABASE_ANON_KEY = " sb_publishable_ClSTH3208cNQ7JYVfeYDcA_lhVoRujw ";
 
-// mee migatha existing code...
+const supabaseClient = supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY
+);
+
+const authSection = document.getElementById("authSection");
+const authEmail = document.getElementById("authEmail");
+const authPassword = document.getElementById("authPassword");
+
+const loginButton =
+  document.getElementById("loginButton");
+
+const signupButton =
+  document.getElementById("signupButton");
+
+const forgotPasswordButton =
+  document.getElementById("forgotPasswordButton");
+
+const logoutButton =
+  document.getElementById("logoutButton");
+
+const authStatus =
+  document.getElementById("authStatus");
+
+
+// LOGIN
+loginButton.addEventListener("click", async () => {
+
+  const email = authEmail.value.trim();
+  const password = authPassword.value;
+
+  if (!email || !password) {
+    authStatus.textContent =
+      "Please enter email and password.";
+    return;
+  }
+
+  authStatus.textContent = "Logging in...";
+
+  const { error } =
+    await supabaseClient.auth.signInWithPassword({
+      email: email,
+      password: password
+    });
+
+  if (error) {
+    authStatus.textContent =
+      "❌ " + error.message;
+    return;
+  }
+
+  authStatus.textContent =
+    "Login successful ✅";
+
+  updateAuthUI();
+});
+
+
+// SIGN UP
+signupButton.addEventListener("click", async () => {
+
+  const email = authEmail.value.trim();
+  const password = authPassword.value;
+
+  if (!email || !password) {
+    authStatus.textContent =
+      "Please enter email and password.";
+    return;
+  }
+
+  if (password.length < 6) {
+    authStatus.textContent =
+      "Password must be at least 6 characters.";
+    return;
+  }
+
+  authStatus.textContent = "Creating account...";
+
+  const { error } =
+    await supabaseClient.auth.signUp({
+      email: email,
+      password: password
+    });
+
+  if (error) {
+    authStatus.textContent =
+      "❌ " + error.message;
+    return;
+  }
+
+  authStatus.textContent =
+    "Signup successful ✅ Please check your email.";
+});
+
+
+// FORGOT PASSWORD
+forgotPasswordButton.addEventListener(
+  "click",
+  async () => {
+
+    const email = authEmail.value.trim();
+
+    if (!email) {
+      authStatus.textContent =
+        "Please enter your email first.";
+      return;
+    }
+
+    authStatus.textContent =
+      "Sending password reset link...";
+
+    const { error } =
+      await supabaseClient.auth.resetPasswordForEmail(
+        email,
+        {
+          redirectTo:
+            window.location.origin
+        }
+      );
+
+    if (error) {
+      authStatus.textContent =
+        "❌ " + error.message;
+      return;
+    }
+
+    authStatus.textContent =
+      "Password reset link sent ✅ Check your email.";
+  }
+);
+
+
+// LOGOUT
+logoutButton.addEventListener(
+  "click",
+  async () => {
+
+    await supabaseClient.auth.signOut();
+
+    updateAuthUI();
+  }
+);
+
+
+// UPDATE LOGIN UI
+async function updateAuthUI() {
+
+  const {
+    data: {
+      session
+    }
+  } = await supabaseClient.auth.getSession();
+
+  if (session) {
+
+    authStatus.textContent =
+      "Logged in as " + session.user.email;
+
+    authEmail.style.display = "none";
+    authPassword.style.display = "none";
+
+    loginButton.style.display = "none";
+    signupButton.style.display = "none";
+    forgotPasswordButton.style.display = "none";
+
+    logoutButton.style.display =
+      "inline-block";
+
+  } else {
+
+    authEmail.style.display = "inline-block";
+    authPassword.style.display = "inline-block";
+
+    loginButton.style.display = "inline-block";
+    signupButton.style.display = "inline-block";
+    forgotPasswordButton.style.display =
+      "inline-block";
+
+    logoutButton.style.display = "none";
+  }
+}
+
+
+// CHECK LOGIN WHEN PAGE OPENS
+updateAuthUI();
+
+
+// LOGIN STATE CHANGES
+supabaseClient.auth.onAuthStateChange(
+  () => {
+    updateAuthUI();
+  }
+);
 
 const trimControls = document.getElementById("trimControls");
 const startTime = document.getElementById("startTime");
