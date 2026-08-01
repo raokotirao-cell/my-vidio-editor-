@@ -1,6 +1,14 @@
 const videoInput = document.getElementById("videoInput");
 const videoPreview = document.getElementById("videoPreview");
 const addVideo = document.getElementById("addVideo");
+// SUPABASE LOGIN / SIGNUP CODE
+// ← ikkada complete login code
+
+const videoInput = document.getElementById("videoInput");
+const videoPreview = document.getElementById("videoPreview");
+const addVideo = document.getElementById("addVideo");
+
+// mee migatha existing code...
 
 const trimControls = document.getElementById("trimControls");
 const startTime = document.getElementById("startTime");
