@@ -4165,3 +4165,31 @@ console.log(
   "Supabase connected:",
   !!supabaseClient
 );
+// ============================================
+// SUPABASE SIGNUP TEST
+// ============================================
+
+async function testSupabaseSignup(email, password) {
+
+  const { data, error } =
+    await supabaseClient.auth.signUp({
+      email: email,
+      password: password
+    });
+
+  if (error) {
+    console.error(
+      "Supabase Signup Error:",
+      error.message
+    );
+
+    return false;
+  }
+
+  console.log(
+    "Supabase Signup Success:",
+    data
+  );
+
+  return true;
+}
