@@ -7,7 +7,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
 
-      status.textContent = "STEP 1 - Loading FFmpeg module...";
+      status.textContent =
+        "STEP 1 - Loading FFmpeg module...";
 
       const { FFmpeg } = await import(
         "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js"
@@ -17,33 +18,45 @@ document.addEventListener("DOMContentLoaded", () => {
         "https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js"
       );
 
-      status.textContent = "STEP 2 - Creating FFmpeg...";
+      status.textContent =
+        "STEP 2 - Creating FFmpeg...";
 
       const ffmpeg = new FFmpeg();
 
-      const baseURL =
+      const coreBase =
         "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
 
-      status.textContent = "STEP 3 - Preparing FFmpeg files...";
+      const ffmpegBase =
+        "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm";
+
+      status.textContent =
+        "STEP 3 - Preparing Worker...";
+
+      const classWorkerURL = await toBlobURL(
+        `${ffmpegBase}/worker.js`,
+        "text/javascript"
+      );
 
       const coreURL = await toBlobURL(
-        `${baseURL}/ffmpeg-core.js`,
+        `${coreBase}/ffmpeg-core.js`,
         "text/javascript"
       );
 
       const wasmURL = await toBlobURL(
-        `${baseURL}/ffmpeg-core.wasm`,
+        `${coreBase}/ffmpeg-core.wasm`,
         "application/wasm"
       );
 
       const workerURL = await toBlobURL(
-        `${baseURL}/ffmpeg-core.worker.js`,
+        `${coreBase}/ffmpeg-core.worker.js`,
         "text/javascript"
       );
 
-      status.textContent = "STEP 4 - Loading FFmpeg...";
+      status.textContent =
+        "STEP 4 - Loading FFmpeg...";
 
       await ffmpeg.load({
+        classWorkerURL,
         coreURL,
         wasmURL,
         workerURL
