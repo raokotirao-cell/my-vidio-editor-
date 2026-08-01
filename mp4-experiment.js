@@ -48,6 +48,7 @@ observer.observe(document.body,{
 convertButton.addEventListener(
 "click",
 async()=>{
+  alert("CONVERT BUTTON CLICKED");
 
 try {
 
