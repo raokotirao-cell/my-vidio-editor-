@@ -66,9 +66,10 @@ try {
     status.textContent = "Loading FFmpeg...";
 
     await ffmpeg.load({
-      coreURL: "/ffmpeg/ffmpeg-core.js",
-      wasmURL: "/ffmpeg/ffmpeg-core.wasm"
-    });
+  coreURL: "/ffmpeg/ffmpeg-core.js",
+  wasmURL: "/ffmpeg/ffmpeg-core.wasm",
+  workerURL: "/ffmpeg/worker.js"
+});
 
     ffmpegLoaded = true;
   }
