@@ -1,39 +1,16 @@
 document.addEventListener("DOMContentLoaded", () => {
 
-  const button =
-    document.getElementById("convertToMp4");
+  const button = document.getElementById("convertToMp4");
 
   if (!button) {
-    alert("BUTTON NOT FOUND");
+    alert("NEW MP4 JS LOADED - BUTTON NOT FOUND");
     return;
   }
 
-  button.addEventListener("click", async () => {
+  alert("NEW MP4 JS LOADED");
 
-    alert("MP4 BUTTON CLICKED");
-
-    try {
-
-      const { FFmpeg } =
-        await import("./ffmpeg/index.js");
-
-      alert("FFMPEG MODULE LOADED");
-
-      const ffmpeg = new FFmpeg();
-
-      alert("FFMPEG CONSTRUCTOR OK");
-
-    } catch (error) {
-
-      alert(
-        "FFMPEG ERROR:\n\n" +
-        error.message +
-        "\n\nSTACK:\n" +
-        error.stack
-      );
-
-    }
-
-  });
+  button.onclick = () => {
+    alert("NEW MP4 BUTTON CLICKED");
+  };
 
 });
