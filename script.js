@@ -64,6 +64,7 @@ loginButton.addEventListener("click", async () => {
 
   updateAuthUI();
 });
+console.log("SUPABASE LOGIN CODE LOADED");
 
 
 // SIGN UP
