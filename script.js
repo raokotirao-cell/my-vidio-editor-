@@ -3856,6 +3856,7 @@ async function loadFFmpeg() {
 
       // Hide login
       loginScreen.style.display = "none";
+logoutButton.style.display = "block";
 
       // Show Studio
       studioElements.forEach(element => {
