@@ -1,8 +1,7 @@
 // ======================================
 // MP4 EXPERIMENT
 // ======================================
-import { FFmpeg } from "https://esm.sh/@ffmpeg/ffmpeg@0.12.10";
-import { fetchFile } from "https://esm.sh/@ffmpeg/util@0.12.1";
+import { FFmpeg } from "./ffmpeg/index.js";
 
 const ffmpeg = new FFmpeg();
 let ffmpegLoaded = false;
