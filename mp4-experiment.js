@@ -5,7 +5,17 @@ import { FFmpeg } from "./ffmpeg/index.js";
 
 alert("LOCAL MP4 MODULE LOADED");
 
-const ffmpeg = new FFmpeg();
+let ffmpeg;
+
+try {
+  ffmpeg = new FFmpeg();
+  alert("FFmpeg constructor OK");
+} catch (e) {
+  alert("FFmpeg constructor ERROR:\n\n" + e);
+  throw e;
+}
+
+
 let ffmpegLoaded = false;
 
 (() => {
