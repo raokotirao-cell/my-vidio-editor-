@@ -3729,5 +3729,21 @@ if (musicAudio) {
   );
 
 })();
+// ============================================
+// FFMPEG MP4 SUPPORT
+// ============================================
+
+let ffmpegReady = false;
+
+async function loadFFmpeg() {
+  if (ffmpegReady) return;
+
+  console.log("FFmpeg loading...");
+
+  // MP4 conversion will be connected in next step
+  ffmpegReady = true;
+
+  console.log("FFmpeg ready");
+}
 
   
