@@ -3885,7 +3885,7 @@ logoutButton.style.display = "block";
   ) {
 
     loginScreen.style.display = "none";
-
+logoutButton.style.display = "block";
     studioElements.forEach(element => {
       element.style.display = "";
 // ============================================
