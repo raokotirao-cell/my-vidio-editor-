@@ -14,6 +14,7 @@ const download =
 document.getElementById("downloadMp4");
 
 if (!convertButton) return;
+  convertButton.style.display = "inline-block";
 
 // Show button when a WebM is ready
 const observer = new MutationObserver(() => {
