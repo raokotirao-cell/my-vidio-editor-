@@ -48,7 +48,8 @@ document.addEventListener("DOMContentLoaded", () => {
         "STEP 4 - Loading FFmpeg...";
 
       await ffmpeg.load({
-        classWorkerURL: "/ffmpeg/worker.js",
+        classWorkerURL:
+  window.location.origin + "/ffmpeg/worker.js",
         coreURL,
         wasmURL,
         workerURL
