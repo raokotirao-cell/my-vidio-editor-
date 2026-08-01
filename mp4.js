@@ -23,28 +23,35 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const ffmpeg = new FFmpeg();
 
+      const coreBase =
+        "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
+
       status.textContent =
         "STEP 3 - Preparing FFmpeg core...";
 
-      const baseURL =
-        "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
-
       const coreURL = await toBlobURL(
-        `${baseURL}/ffmpeg-core.js`,
+        `${coreBase}/ffmpeg-core.js`,
         "text/javascript"
       );
 
       const wasmURL = await toBlobURL(
-        `${baseURL}/ffmpeg-core.wasm`,
+        `${coreBase}/ffmpeg-core.wasm`,
         "application/wasm"
+      );
+
+      const workerURL = await toBlobURL(
+        `${coreBase}/ffmpeg-core.worker.js`,
+        "text/javascript"
       );
 
       status.textContent =
         "STEP 4 - Loading FFmpeg...";
 
       await ffmpeg.load({
+        classWorkerURL: "/ffmpeg/worker.js",
         coreURL,
-        wasmURL
+        wasmURL,
+        workerURL
       });
 
       status.textContent =
