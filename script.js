@@ -1,6 +1,38 @@
 const videoInput = document.getElementById("videoInput");
 const videoPreview = document.getElementById("videoPreview");
 const addVideo = document.getElementById("addVideo");
+// ============================================
+// GLOBAL VIDEO AUDIO SOURCE
+// ============================================
+
+let globalAudioContext = null;
+let globalVideoSource = null;
+
+function getGlobalVideoSource() {
+
+  if (!globalAudioContext) {
+
+    const AudioContext =
+      window.AudioContext ||
+      window.webkitAudioContext;
+
+    globalAudioContext =
+      new AudioContext();
+  }
+
+  if (!globalVideoSource) {
+
+    globalVideoSource =
+      globalAudioContext.createMediaElementSource(
+        videoPreview
+      );
+  }
+
+  return {
+    audioContext: globalAudioContext,
+    source: globalVideoSource
+  };
+}
 
 const speedControls =
   document.getElementById("speedControls");
@@ -582,18 +614,15 @@ exportTrim.addEventListener("click", async () => {
     const AudioContext =
       window.AudioContext ||
       window.webkitAudioContext;
+const {
+  audioContext,
+  source
+} = getGlobalVideoSource();
 
-    const audioContext = new AudioContext();
+const destination =
+  audioContext.createMediaStreamDestination();
 
-    const source =
-      audioContext.createMediaElementSource(
-        videoPreview
-      );
-
-    const destination =
-      audioContext.createMediaStreamDestination();
-
-    source.connect(destination);
+source.connect(destination);
 
     const videoStream =
       canvas.captureStream(30);
@@ -856,7 +885,7 @@ drawFrame();
       track.stop();
     });
 
-    audioContext.close();
+
 
   } catch (error) {
 
