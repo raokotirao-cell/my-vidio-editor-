@@ -488,6 +488,200 @@ if (applyText) {
   );
 
 }
+ // ============================================
+// CAPTIONS / SUBTITLES
+// ============================================
+
+const captionControls =
+  document.getElementById("captionControls");
+
+const captionText =
+  document.getElementById("captionText");
+
+const captionStart =
+  document.getElementById("captionStart");
+
+const captionEnd =
+  document.getElementById("captionEnd");
+
+const addCaption =
+  document.getElementById("addCaption");
+
+const clearCaptions =
+  document.getElementById("clearCaptions");
+
+const captionList =
+  document.getElementById("captionList");
+
+const captionStatus =
+  document.getElementById("captionStatus");
+
+let captions = [];
+
+if (captionControls) {
+  captionControls.style.display = "block";
+}
+
+if (addCaption) {
+
+  addCaption.addEventListener(
+    "click",
+    () => {
+
+      const text =
+        captionText.value.trim();
+
+      const start =
+        Number(captionStart.value);
+
+      const end =
+        Number(captionEnd.value);
+
+      if (!text) {
+
+        captionStatus.textContent =
+          "Please enter caption text.";
+
+        return;
+      }
+
+      if (
+        !Number.isFinite(start) ||
+        !Number.isFinite(end) ||
+        end <= start
+      ) {
+
+        captionStatus.textContent =
+          "Please enter valid start and end times.";
+
+        return;
+      }
+
+      captions.push({
+        text: text,
+        start: start,
+        end: end
+      });
+
+      renderCaptionList();
+
+      captionText.value = "";
+
+      captionStatus.textContent =
+        "Caption added ✅";
+
+    }
+  );
+
+}
+
+if (clearCaptions) {
+
+  clearCaptions.addEventListener(
+    "click",
+    () => {
+
+      captions = [];
+
+      renderCaptionList();
+
+      captionStatus.textContent =
+        "All captions cleared.";
+
+    }
+  );
+
+}
+
+function renderCaptionList() {
+
+  if (!captionList) return;
+
+  captionList.innerHTML = "";
+
+  captions.forEach(
+    (caption, index) => {
+
+      const item =
+        document.createElement("div");
+
+      item.textContent =
+        (index + 1) +
+        ". " +
+        caption.start.toFixed(1) +
+        "s - " +
+        caption.end.toFixed(1) +
+        "s : " +
+        caption.text;
+
+      captionList.appendChild(item);
+
+    }
+  );
+
+}
+
+function drawActiveCaption(
+  ctx,
+  canvas,
+  currentTime
+) {
+
+  const activeCaption =
+    captions.find(
+      caption =>
+        currentTime >= caption.start &&
+        currentTime < caption.end
+    );
+
+  if (!activeCaption) return;
+
+  ctx.save();
+
+  ctx.font =
+    "bold 32px Arial";
+
+  ctx.textAlign =
+    "center";
+
+  ctx.textBaseline =
+    "middle";
+
+  const x =
+    canvas.width / 2;
+
+  const y =
+    canvas.height - 60;
+
+  const padding = 12;
+
+  const textWidth =
+    ctx.measureText(
+      activeCaption.text
+    ).width;
+
+  ctx.fillStyle =
+    "rgba(0, 0, 0, 0.65)";
+
+  ctx.fillRect(
+    x - textWidth / 2 - padding,
+    y - 22,
+    textWidth + padding * 2,
+    44
+  );
+
+  ctx.fillStyle =
+    "#ffffff";
+
+  ctx.fillText(
+    activeCaption.text,
+    x,
+    y
+  );
+
+  ctx.restore();
+
+}
 // ============================================
 // VIDEO FILTERS
 // ============================================
@@ -747,9 +941,14 @@ if (selectedFilter !== "none") {
     if (selectedFilter !== "none") {
     ctx.restore();
   }
-
+drawActiveCaption(
+  ctx,
+  canvas,
+  videoPreview.currentTime
+);
   if (overlayText) {
 
+    
   ctx.font =
     "bold " +
     overlayTextSize +
