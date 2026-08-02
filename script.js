@@ -247,12 +247,33 @@ function addExportHistory(name, url) {
   download.download = name;
   download.textContent = "Download";
   download.style.marginLeft = "10px";
+item.appendChild(title);
+item.appendChild(download);
 
-  item.appendChild(title);
-  item.appendChild(download);
+const deleteButton =
+  document.createElement("button");
 
-  exportHistoryList.prepend(item);
-}
+deleteButton.textContent = "Delete";
+deleteButton.style.marginLeft = "10px";
+
+deleteButton.addEventListener(
+  "click",
+  () => {
+
+    item.remove();
+
+    if (
+      exportHistoryList.children.length === 0
+    ) {
+      exportHistory.style.display = "none";
+    }
+
+  }
+);
+
+item.appendChild(deleteButton);
+
+exportHistoryList.prepend(item);
 
 let videoURL = null;
 let downloadURL = null;
