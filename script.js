@@ -541,6 +541,7 @@ exportTrim.addEventListener("click", async () => {
   outputPreview.src = downloadURL;
   outputPreview.style.display = "block";
 }
+    addExportHistory("trimmed-video.webm", downloadURL);
 
     downloadVideo.download =
       "trimmed-video.webm";
@@ -1196,6 +1197,10 @@ videoGain.gain.value =
   outputPreview.src = musicDownloadURL;
   outputPreview.style.display = "block";
 }
+          addExportHistory(
+  "video-with-music.webm",
+  musicDownloadURL
+);
 
 
           if (downloadMusic) {
@@ -1810,6 +1815,10 @@ videoGain.gain.value =
   outputPreview.src = url;
   outputPreview.style.display = "block";
 }
+        addExportHistory(
+  "combined-video.webm",
+  url
+);
 
 
         downloadTwoParts.href =
@@ -2621,6 +2630,10 @@ if (chunks.length === 0) {
   outputPreview.src = outputUrl;
   outputPreview.style.display = "block";
 }
+        addExportHistory(
+  "combined-videos.webm",
+  outputUrl
+);
 
 
         // --------------------------------
@@ -3845,6 +3858,10 @@ if (musicAudio) {
   outputPreview.src = outputURL;
   outputPreview.style.display = "block";
 }
+        addExportHistory(
+  "video-with-own-voice.webm",
+  outputURL
+);
 
 
         if (downloadVoiceVideo) {
