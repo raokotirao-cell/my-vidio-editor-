@@ -220,6 +220,23 @@ const exportHistory =
 
 const exportHistoryList =
   document.getElementById("exportHistoryList");
+const clearExportHistory =
+  document.getElementById("clearExportHistory");
+
+if (clearExportHistory) {
+
+  clearExportHistory.addEventListener(
+    "click",
+    () => {
+
+      exportHistoryList.innerHTML = "";
+
+      exportHistory.style.display = "none";
+
+    }
+  );
+
+}
 
 function addExportHistory(name, url) {
 
@@ -274,6 +291,7 @@ deleteButton.addEventListener(
 item.appendChild(deleteButton);
 
 exportHistoryList.prepend(item);
+  }
 
 let videoURL = null;
 let downloadURL = null;
@@ -575,7 +593,8 @@ exportTrim.addEventListener("click", async () => {
 
     exportStatus.textContent =
       "Trimmed video + audio ready ✅";
-
+addExportHistory("trimmed-video.webm", downloadURL);
+    
     combinedStream.getTracks().forEach(track => {
       track.stop();
     });
