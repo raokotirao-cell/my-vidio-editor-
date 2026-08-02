@@ -457,6 +457,68 @@ if (applyText) {
 
 }
 // ============================================
+// VIDEO FILTERS
+// ============================================
+
+const filterControls =
+  document.getElementById("filterControls");
+
+const videoFilter =
+  document.getElementById("videoFilter");
+
+const applyFilter =
+  document.getElementById("applyFilter");
+
+const filterStatus =
+  document.getElementById("filterStatus");
+
+let selectedFilter = "none";
+
+if (filterControls) {
+  filterControls.style.display = "block";
+}
+
+if (applyFilter) {
+
+  applyFilter.addEventListener(
+    "click",
+    () => {
+
+      selectedFilter =
+        videoFilter.value || "none";
+
+      videoPreview.style.filter =
+        getFilterCSS(selectedFilter);
+
+      filterStatus.textContent =
+        "Filter applied ✅";
+
+    }
+  );
+
+}
+
+function getFilterCSS(filter) {
+
+  if (filter === "grayscale") {
+    return "grayscale(100%)";
+  }
+
+  if (filter === "sepia") {
+    return "sepia(100%)";
+  }
+
+  if (filter === "brightness") {
+    return "brightness(130%)";
+  }
+
+  if (filter === "contrast") {
+    return "contrast(150%)";
+  }
+
+  return "none";
+}
+// ============================================
 // VIDEO SPEED CONTROL
 // ============================================
 
@@ -624,7 +686,28 @@ videoPreview.defaultPlaybackRate = selectedSpeed;
 const drawFrame = () => {
 
   if (!drawing) return;
+if (selectedFilter !== "none") {
 
+  ctx.save();
+
+  if (selectedFilter === "grayscale") {
+    ctx.filter = "grayscale(100%)";
+  }
+
+  if (selectedFilter === "sepia") {
+    ctx.filter = "sepia(100%)";
+  }
+
+  if (selectedFilter === "brightness") {
+    ctx.filter = "brightness(130%)";
+  }
+
+  if (selectedFilter === "contrast") {
+    ctx.filter = "contrast(150%)";
+  }
+
+}
+  
   ctx.drawImage(
     videoPreview,
     0,
@@ -632,6 +715,10 @@ const drawFrame = () => {
     canvas.width,
     canvas.height
   );
+    if (selectedFilter !== "none") {
+    ctx.restore();
+  }
+
   if (overlayText) {
 
   ctx.font =
