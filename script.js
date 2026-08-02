@@ -1,6 +1,18 @@
 const videoInput = document.getElementById("videoInput");
 const videoPreview = document.getElementById("videoPreview");
 const addVideo = document.getElementById("addVideo");
+
+const speedControls =
+  document.getElementById("speedControls");
+
+const videoSpeed =
+  document.getElementById("videoSpeed");
+
+const applySpeed =
+  document.getElementById("applySpeed");
+
+const speedStatus =
+  document.getElementById("speedStatus");
 // ============================================
 // SUPABASE LOGIN / SIGNUP
 // ============================================
@@ -325,6 +337,9 @@ videoInput.addEventListener("change", () => {
   videoPreview.src = videoURL;
   videoPreview.style.display = "block";
   trimControls.style.display = "block";
+  if (speedControls) {
+  speedControls.style.display = "block";
+}
 });
 
 // Metadata loaded
@@ -364,6 +379,7 @@ previewTrim.addEventListener("click", async () => {
       videoPreview.removeEventListener(
         "timeupdate",
         stopPreview
+        
       );
     }
   };
@@ -373,6 +389,33 @@ previewTrim.addEventListener("click", async () => {
     stopPreview
   );
 });
+// ============================================
+// VIDEO SPEED CONTROL
+// ============================================
+
+if (applySpeed) {
+
+  applySpeed.addEventListener("click", () => {
+
+    const speed =
+      Number(videoSpeed.value);
+
+    if (!videoPreview.src) {
+      speedStatus.textContent =
+        "Please select a video first.";
+      return;
+    }
+
+    videoPreview.playbackRate = speed;
+
+    speedStatus.textContent =
+      "Video speed set to " +
+      speed +
+      "× ✅";
+
+  });
+
+}
 
 // EXPORT
 exportTrim.addEventListener("click", async () => {
