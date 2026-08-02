@@ -546,24 +546,33 @@ exportTrim.addEventListener("click", async () => {
 
     exportStatus.textContent =
       "Exporting video + audio...";
+let drawing = true;
 
-    let drawing = true;
+const selectedSpeed =
+  Number(videoSpeed.value) || 1;
+    videoPreview.playbackRate = selectedSpeed;
 
-    const drawFrame = () => {
-      if (!drawing) return;
+videoPreview.defaultPlaybackRate = selectedSpeed;
 
-      ctx.drawImage(
-        videoPreview,
-        0,
-        0,
-        canvas.width,
-        canvas.height
-      );
+const drawFrame = () => {
 
-      requestAnimationFrame(drawFrame);
-    };
+  if (!drawing) return;
 
-    drawFrame();
+  ctx.drawImage(
+    videoPreview,
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+
+  requestAnimationFrame(
+    drawFrame
+  );
+
+};
+
+drawFrame();
 
     const stopExport = () => {
       if (videoPreview.currentTime >= end) {
@@ -588,7 +597,8 @@ exportTrim.addEventListener("click", async () => {
     );
 
     const durationMs =
-      ((end - start) + 2) * 1000;
+  (((end - start) / selectedSpeed) + 2) * 1000;
+    
 
     setTimeout(() => {
       drawing = false;
@@ -636,7 +646,7 @@ exportTrim.addEventListener("click", async () => {
 
     exportStatus.textContent =
       "Trimmed video + audio ready ✅";
-addExportHistory("trimmed-video.webm", downloadURL);
+
     
     combinedStream.getTracks().forEach(track => {
       track.stop();
@@ -1185,6 +1195,13 @@ videoGain.gain.value =
           // --------------------------------
 
           let drawing = true;
+          const selectedSpeed =
+  Number(videoSpeed.value) || 1;
+
+const frameInterval =
+  1000 / (30 * selectedSpeed);
+
+let lastFrameTime = 0;
 
           const drawFrame = () => {
 
