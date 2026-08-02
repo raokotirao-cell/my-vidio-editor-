@@ -390,6 +390,73 @@ previewTrim.addEventListener("click", async () => {
   );
 });
 // ============================================
+// TEXT ON VIDEO
+// ============================================
+
+const textControls =
+  document.getElementById("textControls");
+
+const videoText =
+  document.getElementById("videoText");
+
+const textSize =
+  document.getElementById("textSize");
+
+const textColor =
+  document.getElementById("textColor");
+
+const textPosition =
+  document.getElementById("textPosition");
+
+const applyText =
+  document.getElementById("applyText");
+
+const textStatus =
+  document.getElementById("textStatus");
+
+let overlayText = "";
+let overlayTextSize = 32;
+let overlayTextColor = "#ffffff";
+let overlayTextPosition = "center";
+
+if (textControls) {
+  textControls.style.display = "block";
+}
+
+if (applyText) {
+
+  applyText.addEventListener(
+    "click",
+    () => {
+
+      overlayText =
+        videoText.value.trim();
+
+      overlayTextSize =
+        Number(textSize.value) || 32;
+
+      overlayTextColor =
+        textColor.value || "#ffffff";
+
+      overlayTextPosition =
+        textPosition.value || "center";
+
+      if (!overlayText) {
+
+        textStatus.textContent =
+          "Please enter text first.";
+
+        return;
+      }
+
+      textStatus.textContent =
+        "Text applied ✅";
+
+    }
+  );
+
+}
+// ============================================
 // VIDEO SPEED CONTROL
 // ============================================
 
@@ -565,6 +632,52 @@ const drawFrame = () => {
     canvas.width,
     canvas.height
   );
+  if (overlayText) {
+
+  ctx.font =
+    "bold " +
+    overlayTextSize +
+    "px Arial";
+
+  ctx.fillStyle =
+    overlayTextColor;
+
+  ctx.textAlign =
+    "center";
+
+  ctx.textBaseline =
+    "middle";
+
+  let textY;
+
+  if (overlayTextPosition === "top") {
+
+    textY =
+      overlayTextSize + 20;
+
+  } else if (
+    overlayTextPosition === "bottom"
+  ) {
+
+    textY =
+      canvas.height -
+      overlayTextSize -
+      20;
+
+  } else {
+
+    textY =
+      canvas.height / 2;
+
+  }
+
+  ctx.fillText(
+    overlayText,
+    canvas.width / 2,
+    textY
+  );
+
+}
 
   requestAnimationFrame(
     drawFrame
@@ -1214,6 +1327,52 @@ let lastFrameTime = 0;
               canvas.width,
               canvas.height
             );
+            if (overlayText) {
+
+  ctx.font =
+    "bold " +
+    overlayTextSize +
+    "px Arial";
+
+  ctx.fillStyle =
+    overlayTextColor;
+
+  ctx.textAlign =
+    "center";
+
+  ctx.textBaseline =
+    "middle";
+
+  let textY;
+
+  if (overlayTextPosition === "top") {
+
+    textY =
+      overlayTextSize + 20;
+
+  } else if (
+    overlayTextPosition === "bottom"
+  ) {
+
+    textY =
+      canvas.height -
+      overlayTextSize -
+      20;
+
+  } else {
+
+    textY =
+      canvas.height / 2;
+
+  }
+
+  ctx.fillText(
+    overlayText,
+    canvas.width / 2,
+    textY
+  );
+
+}
 
             requestAnimationFrame(
               drawFrame
