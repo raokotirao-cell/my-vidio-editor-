@@ -215,6 +215,44 @@ const exportStatus = document.getElementById("exportStatus");
 const downloadVideo = document.getElementById("downloadVideo");
 const outputPreview =
   document.getElementById("outputPreview");
+const exportHistory =
+  document.getElementById("exportHistory");
+
+const exportHistoryList =
+  document.getElementById("exportHistoryList");
+
+function addExportHistory(name, url) {
+
+  if (!exportHistory || !exportHistoryList) {
+    return;
+  }
+
+  exportHistory.style.display = "block";
+
+  const item =
+    document.createElement("div");
+
+  item.style.marginBottom = "10px";
+
+  const title =
+    document.createElement("span");
+
+  title.textContent =
+    "🎬 " + name + " ";
+
+  const download =
+    document.createElement("a");
+
+  download.href = url;
+  download.download = name;
+  download.textContent = "Download";
+  download.style.marginLeft = "10px";
+
+  item.appendChild(title);
+  item.appendChild(download);
+
+  exportHistoryList.prepend(item);
+}
 
 let videoURL = null;
 let downloadURL = null;
