@@ -213,6 +213,8 @@ const previewTrim = document.getElementById("previewTrim");
 const exportTrim = document.getElementById("exportTrim");
 const exportStatus = document.getElementById("exportStatus");
 const downloadVideo = document.getElementById("downloadVideo");
+const outputPreview =
+  document.getElementById("outputPreview");
 
 let videoURL = null;
 let downloadURL = null;
@@ -497,6 +499,10 @@ exportTrim.addEventListener("click", async () => {
 
     downloadVideo.href =
       downloadURL;
+    if (outputPreview) {
+  outputPreview.src = downloadURL;
+  outputPreview.style.display = "block";
+}
 
     downloadVideo.download =
       "trimmed-video.webm";
