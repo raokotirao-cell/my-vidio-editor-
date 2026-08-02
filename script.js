@@ -1154,6 +1154,10 @@ videoGain.gain.value =
 
           musicDownloadURL =
             URL.createObjectURL(blob);
+          if (outputPreview) {
+  outputPreview.src = musicDownloadURL;
+  outputPreview.style.display = "block";
+}
 
 
           if (downloadMusic) {
