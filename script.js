@@ -1768,6 +1768,10 @@ videoGain.gain.value =
 
         const url =
           URL.createObjectURL(blob);
+        if (outputPreview) {
+  outputPreview.src = url;
+  outputPreview.style.display = "block";
+}
 
 
         downloadTwoParts.href =
@@ -2575,6 +2579,10 @@ if (chunks.length === 0) {
           URL.createObjectURL(
             blob
           );
+        if (outputPreview) {
+  outputPreview.src = outputUrl;
+  outputPreview.style.display = "block";
+}
 
 
         // --------------------------------
@@ -3795,6 +3803,10 @@ if (musicAudio) {
           URL.createObjectURL(
             blob
           );
+        if (outputPreview) {
+  outputPreview.src = outputURL;
+  outputPreview.style.display = "block";
+}
 
 
         if (downloadVoiceVideo) {
