@@ -4600,5 +4600,32 @@ async function loadFFmpeg() {
   console.log("FFmpeg ready");
 }
 
+
+// ============================================
+// ADS CONTROL
+// ============================================
+
+function updateAds(isPremium) {
+
+  const displayAd =
+    document.getElementById("displayAd");
+
+  if (!displayAd) return;
+
+  if (isPremium) {
+
+    // Premium → Hide advertisement
+    displayAd.style.display = "none";
+
+  } else {
+
+    // Free → Show advertisement
+    displayAd.style.display = "block";
+
+  }
+
+}
+
+
     
 
