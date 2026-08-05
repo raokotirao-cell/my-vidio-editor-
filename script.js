@@ -4681,7 +4681,55 @@ async function checkSubscription() {
     data.is_premium
   );
 }
+// ============================================
+// PREMIUM SUBSCRIBE BUTTON
+// ============================================
 
+const subscribePremium =
+  document.getElementById("subscribePremium");
+
+if (subscribePremium) {
+
+  subscribePremium.addEventListener(
+    "click",
+    async () => {
+
+      const {
+        data: {
+          session
+        }
+      } = await supabaseClient.auth.getSession();
+
+      if (!session) {
+
+        alert(
+          "Please login first to subscribe to Premium."
+        );
+
+        return;
+      }
+
+      const subscriptionStatus =
+        document.getElementById(
+          "subscriptionStatus"
+        );
+
+      if (subscriptionStatus) {
+
+        subscriptionStatus.textContent =
+          "Premium payment setup coming next...";
+
+      }
+
+      console.log(
+        "Premium button clicked for:",
+        session.user.email
+      );
+
+    }
+  );
+
+}
 
 // ============================================
 // RUN SUBSCRIPTION CHECK
