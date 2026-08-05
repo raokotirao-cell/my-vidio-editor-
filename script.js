@@ -4600,7 +4600,6 @@ async function loadFFmpeg() {
   console.log("FFmpeg ready");
 }
 
-
 // ============================================
 // ADS CONTROL
 // ============================================
@@ -4623,8 +4622,73 @@ function updateAds(isPremium) {
     displayAd.style.display = "block";
 
   }
-
 }
+
+
+// ============================================
+// CHECK USER SUBSCRIPTION
+// ============================================
+
+async function checkSubscription() {
+
+  const {
+    data: {
+      session
+    }
+  } = await supabaseClient.auth.getSession();
+
+  if (!session) {
+
+    updateAds(false);
+    return;
+
+  }
+
+  const userId = session.user.id;
+
+  const {
+    data,
+    error
+  } = await supabaseClient
+    .from("subscriptions")
+    .select("plan, is_premium")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) {
+
+    console.error(
+      "Subscription check error:",
+      error
+    );
+
+    updateAds(false);
+    return;
+  }
+
+  if (!data) {
+
+    updateAds(false);
+    return;
+  }
+
+  updateAds(data.is_premium === true);
+
+  console.log(
+    "Subscription:",
+    data.plan,
+    "Premium:",
+    data.is_premium
+  );
+}
+
+
+// ============================================
+// RUN SUBSCRIPTION CHECK
+// ============================================
+
+checkSubscription();
+
 
 
     
