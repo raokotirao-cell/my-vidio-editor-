@@ -4737,6 +4737,63 @@ if (subscribePremium) {
 
 checkSubscription();
 
+// ============================================
+// PREMIUM BUTTON TEST
+// ============================================
+
+document.addEventListener("DOMContentLoaded", () => {
+
+  const subscribePremium =
+    document.getElementById("subscribePremium");
+
+  const subscriptionStatus =
+    document.getElementById("subscriptionStatus");
+
+  if (!subscribePremium) {
+    console.error("❌ subscribePremium button not found");
+    return;
+  }
+
+  subscribePremium.addEventListener("click", async () => {
+
+    console.log("✅ Subscribe ₹99 clicked");
+
+    const {
+      data: { session },
+      error
+    } = await supabaseClient.auth.getSession();
+
+    if (error) {
+      console.error("❌ Session error:", error);
+      return;
+    }
+
+    if (!session) {
+
+      if (subscriptionStatus) {
+        subscriptionStatus.textContent =
+          "Please login first.";
+      }
+
+      console.log("❌ No logged-in user");
+      return;
+    }
+
+    console.log(
+      "Premium button clicked for:",
+      session.user.email
+    );
+
+    if (subscriptionStatus) {
+
+      subscriptionStatus.textContent =
+        "Premium payment setup coming next...";
+
+    }
+
+  });
+
+});
 
 
     
