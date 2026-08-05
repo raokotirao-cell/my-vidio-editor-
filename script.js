@@ -4599,5 +4599,695 @@ async function loadFFmpeg() {
 
   console.log("FFmpeg ready");
 }
+// ============================================
+// WATERMARK REMOVER - ISOLATED CODE
+// ============================================
+
+(() => {
+
+const watermarkControls =
+document.getElementById("watermarkControls");
+
+const watermarkPosition =
+document.getElementById("watermarkPosition");
+
+const watermarkSize =
+document.getElementById("watermarkSize");
+
+const removeWatermark =
+document.getElementById("removeWatermark");
+
+const watermarkStatus =
+document.getElementById("watermarkStatus");
+
+const downloadWatermarkVideo =
+document.getElementById("downloadWatermarkVideo");
+
+if (!watermarkControls || !removeWatermark) {
+return;
+}
+
+// Show Watermark Remover
+watermarkControls.style.display = "block";
+
+removeWatermark.addEventListener(
+"click",
+async () => {
+
+```
+  if (!videoURL) {
+
+    alert("Please select a video first.");
+
+    return;
+
+  }
+
+
+  let video = null;
+  let canvas = null;
+  let ctx = null;
+
+  let audioContext = null;
+  let destination = null;
+
+  let videoStream = null;
+  let combinedStream = null;
+  let recorder = null;
+
+  let animationFrame = null;
+
+
+  try {
+
+    removeWatermark.disabled = true;
+
+    downloadWatermarkVideo.style.display =
+      "none";
+
+    watermarkStatus.textContent =
+      "Preparing watermark removal...";
+
+
+    // --------------------------------
+    // LOAD VIDEO
+    // --------------------------------
+
+    video =
+      document.createElement("video");
+
+    video.src = videoURL;
+    video.preload = "auto";
+    video.playsInline = true;
+
+
+    await new Promise(
+      (resolve, reject) => {
+
+        video.onloadedmetadata =
+          resolve;
+
+        video.onerror = () => {
+
+          reject(
+            new Error(
+              "Could not load video."
+            )
+          );
+
+        };
+
+      }
+    );
+
+
+    if (
+      !video.videoWidth ||
+      !video.videoHeight
+    ) {
+
+      throw new Error(
+        "Video dimensions are not available."
+      );
+
+    }
+
+
+    // --------------------------------
+    // CANVAS
+    // --------------------------------
+
+    canvas =
+      document.createElement("canvas");
+
+    canvas.width =
+      video.videoWidth;
+
+    canvas.height =
+      video.videoHeight;
+
+    ctx =
+      canvas.getContext("2d");
+
+
+    if (!ctx) {
+
+      throw new Error(
+        "Could not create canvas."
+      );
+
+    }
+
+
+    // --------------------------------
+    // AUDIO
+    // --------------------------------
+
+    const AudioContext =
+      window.AudioContext ||
+      window.webkitAudioContext;
+
+    if (!AudioContext) {
+
+      throw new Error(
+        "Audio is not supported."
+      );
+
+    }
+
+
+    audioContext =
+      new AudioContext();
+
+    destination =
+      audioContext.createMediaStreamDestination();
+
+
+    const videoSource =
+      audioContext.createMediaElementSource(
+        video
+      );
+
+    videoSource.connect(
+      destination
+    );
+
+
+    // --------------------------------
+    // VIDEO STREAM
+    // --------------------------------
+
+    videoStream =
+      canvas.captureStream(30);
+
+    combinedStream =
+      new MediaStream();
+
+
+    videoStream
+      .getVideoTracks()
+      .forEach(track => {
+
+        combinedStream.addTrack(track);
+
+      });
+
+
+    destination
+      .stream
+      .getAudioTracks()
+      .forEach(track => {
+
+        combinedStream.addTrack(track);
+
+      });
+
+
+    // --------------------------------
+    // RECORDER
+    // --------------------------------
+
+    let mimeType = "";
+
+    const formats = [
+      "video/webm;codecs=vp9,opus",
+      "video/webm;codecs=vp8,opus",
+      "video/webm"
+    ];
+
+
+    for (const format of formats) {
+
+      if (
+        MediaRecorder.isTypeSupported(
+          format
+        )
+      ) {
+
+        mimeType = format;
+        break;
+
+      }
+
+    }
+
+
+    if (!mimeType) {
+
+      throw new Error(
+        "WebM recording is not supported."
+      );
+
+    }
+
+
+    recorder =
+      new MediaRecorder(
+        combinedStream,
+        {
+          mimeType: mimeType
+        }
+      );
+
+
+    const chunks = [];
+
+
+    recorder.ondataavailable =
+      event => {
+
+        if (
+          event.data &&
+          event.data.size > 0
+        ) {
+
+          chunks.push(
+            event.data
+          );
+
+        }
+
+      };
+
+
+    const finished =
+      new Promise(resolve => {
+
+        recorder.onstop =
+          resolve;
+
+      });
+
+
+    // --------------------------------
+    // WATERMARK AREA
+    // --------------------------------
+
+    const position =
+      watermarkPosition.value;
+
+    const size =
+      watermarkSize.value;
+
+
+    let boxWidth =
+      canvas.width * 0.18;
+
+    let boxHeight =
+      canvas.height * 0.10;
+
+
+    if (size === "medium") {
+
+      boxWidth =
+        canvas.width * 0.28;
+
+      boxHeight =
+        canvas.height * 0.16;
+
+    }
+
+
+    if (size === "large") {
+
+      boxWidth =
+        canvas.width * 0.40;
+
+      boxHeight =
+        canvas.height * 0.23;
+
+    }
+
+
+    const margin =
+      Math.min(
+        canvas.width,
+        canvas.height
+      ) * 0.02;
+
+
+    let boxX = margin;
+    let boxY = margin;
+
+
+    if (position === "top-right") {
+
+      boxX =
+        canvas.width -
+        boxWidth -
+        margin;
+
+      boxY =
+        margin;
+
+    }
+
+
+    if (position === "bottom-left") {
+
+      boxX =
+        margin;
+
+      boxY =
+        canvas.height -
+        boxHeight -
+        margin;
+
+    }
+
+
+    if (position === "bottom-right") {
+
+      boxX =
+        canvas.width -
+        boxWidth -
+        margin;
+
+      boxY =
+        canvas.height -
+        boxHeight -
+        margin;
+
+    }
+
+
+    // --------------------------------
+    // START
+    // --------------------------------
+
+    video.currentTime = 0;
+
+    await audioContext.resume();
+
+    recorder.start(200);
+
+    await video.play();
+
+
+    watermarkStatus.textContent =
+      "Removing watermark...";
+
+
+    // --------------------------------
+    // DRAW VIDEO
+    // --------------------------------
+
+    let drawing = true;
+
+
+    const drawFrame = () => {
+
+      if (!drawing) {
+        return;
+      }
+
+
+      // Draw original frame
+      ctx.drawImage(
+        video,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      );
+
+
+      // --------------------------------
+      // WATERMARK COVER
+      // --------------------------------
+
+      ctx.save();
+
+
+      /*
+       * Blur the selected watermark area.
+       * This hides the existing watermark
+       * without changing the video size.
+       */
+
+      ctx.beginPath();
+
+      ctx.rect(
+        boxX,
+        boxY,
+        boxWidth,
+        boxHeight
+      );
+
+      ctx.clip();
+
+
+      ctx.filter =
+        "blur(14px)";
+
+
+      ctx.drawImage(
+        video,
+        boxX - 8,
+        boxY - 8,
+        boxWidth + 16,
+        boxHeight + 16
+      );
+
+
+      ctx.restore();
+
+
+      animationFrame =
+        requestAnimationFrame(
+          drawFrame
+        );
+
+    };
+
+
+    drawFrame();
+
+
+    // --------------------------------
+    // STOP
+    // --------------------------------
+
+    const finishExport = () => {
+
+      drawing = false;
+
+
+      if (animationFrame) {
+
+        cancelAnimationFrame(
+          animationFrame
+        );
+
+        animationFrame = null;
+
+      }
+
+
+      video.pause();
+
+
+      if (
+        recorder &&
+        recorder.state !== "inactive"
+      ) {
+
+        recorder.stop();
+
+      }
+
+    };
+
+
+    video.addEventListener(
+      "ended",
+      finishExport,
+      {
+        once: true
+      }
+    );
+
+
+    // Safety timer
+    setTimeout(
+      () => {
+
+        if (
+          recorder &&
+          recorder.state !== "inactive"
+        ) {
+
+          finishExport();
+
+        }
+
+      },
+      Math.max(
+        3000,
+        (video.duration * 1000) + 2000
+      )
+    );
+
+
+    await finished;
+
+
+    // --------------------------------
+    // OUTPUT
+    // --------------------------------
+
+    if (chunks.length === 0) {
+
+      throw new Error(
+        "No video data was created."
+      );
+
+    }
+
+
+    const blob =
+      new Blob(
+        chunks,
+        {
+          type: "video/webm"
+        }
+      );
+
+
+    if (blob.size === 0) {
+
+      throw new Error(
+        "Output video is empty."
+      );
+
+    }
+
+
+    const outputURL =
+      URL.createObjectURL(blob);
+
+
+    downloadWatermarkVideo.href =
+      outputURL;
+
+    downloadWatermarkVideo.download =
+      "watermark-removed-video.webm";
+
+    downloadWatermarkVideo.textContent =
+      "Download Watermark Removed Video";
+
+    downloadWatermarkVideo.style.display =
+      "inline-block";
+
+
+    if (outputPreview) {
+
+      outputPreview.src =
+        outputURL;
+
+      outputPreview.style.display =
+        "block";
+
+    }
+
+
+    addExportHistory(
+      "watermark-removed-video.webm",
+      outputURL
+    );
+
+
+    watermarkStatus.textContent =
+      "✅ Watermark area processed successfully.";
+
+
+  } catch (error) {
+
+    console.error(
+      "Watermark remover error:",
+      error
+    );
+
+
+    watermarkStatus.textContent =
+      "❌ Watermark removal failed: " +
+      (
+        error.message ||
+        String(error)
+      );
+
+
+  } finally {
+
+    if (animationFrame) {
+
+      cancelAnimationFrame(
+        animationFrame
+      );
+
+    }
+
+
+    if (video) {
+
+      try {
+        video.pause();
+      } catch (e) {}
+
+    }
+
+
+    if (combinedStream) {
+
+      combinedStream
+        .getTracks()
+        .forEach(track => {
+
+          try {
+            track.stop();
+          } catch (e) {}
+
+        });
+
+    }
+
+
+    if (videoStream) {
+
+      videoStream
+        .getTracks()
+        .forEach(track => {
+
+          try {
+            track.stop();
+          } catch (e) {}
+
+        });
+
+    }
+
+
+    if (audioContext) {
+
+      try {
+
+        await audioContext.close();
+
+      } catch (e) {}
+
+    }
+
+
+    removeWatermark.disabled =
+      false;
+
+  }
+
+}
+```
+
+);
+
+})();
 
 
